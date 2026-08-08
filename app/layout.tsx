@@ -43,12 +43,13 @@ export default function RootLayout({
       data-theme="blood"
       data-font="default"
       className={`${cinzel.variable} ${cormorant.variable} ${inter.variable}`}
+      suppressHydrationWarning
     >
       <head>
         {/* Applies the stored theme before first paint, so there is no flash. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
       </head>
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }
