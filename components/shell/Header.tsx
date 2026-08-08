@@ -1,8 +1,24 @@
+import type { ReactNode } from "react";
+
 import { CheckCircleIcon } from "@/components/icons/CheckCircleIcon";
 import { Pill } from "@/components/ui/Pill";
 
-/** 56px app header: wordmark + tagline on the left, status pill on the right. */
-export function Header() {
+interface HeaderProps {
+  /** Defaults match Phase 1's Finished Piece screen exactly — every other screen passes its own. */
+  statusLabel?: string;
+  statusIcon?: ReactNode;
+}
+
+/**
+ * 56px app header: wordmark + tagline on the left, status pill on the right.
+ * The wordmark and layout stay identical across every screen; the pill is
+ * the one thing that changes, since "Finished Creative Piece" would be
+ * actively wrong to show while a creator is still mid-flood.
+ */
+export function Header({
+  statusLabel = "Finished Creative Piece",
+  statusIcon = <CheckCircleIcon size={14} />,
+}: HeaderProps) {
   return (
     <header className="appbar">
       <div className="appbar__left">
@@ -11,7 +27,7 @@ export function Header() {
         <span className="tagline">Your ideas. Your voice. Finished.</span>
       </div>
 
-      <Pill icon={<CheckCircleIcon size={14} />}>Finished Creative Piece</Pill>
+      <Pill icon={statusIcon}>{statusLabel}</Pill>
     </header>
   );
 }
