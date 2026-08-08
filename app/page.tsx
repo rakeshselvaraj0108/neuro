@@ -1,51 +1,55 @@
 "use client";
 
-import { useId } from "react";
-import { MotionConfig } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 
-import { PieceCanvas } from "@/components/piece/PieceCanvas";
-import { ExportPanel } from "@/components/rail/ExportPanel";
-import { JourneyPanel } from "@/components/rail/JourneyPanel";
-import { QuotePanel } from "@/components/rail/QuotePanel";
-import { Footer } from "@/components/shell/Footer";
+import { ConstellationScreen } from "@/components/screens/ConstellationScreen";
+import { FinishedPieceScreen } from "@/components/screens/FinishedPieceScreen";
+import { FloodScreen } from "@/components/screens/FloodScreen";
+import { MomentumScreen } from "@/components/screens/MomentumScreen";
+import { ShipScreen } from "@/components/screens/ShipScreen";
 import { GrainOverlay } from "@/components/shell/GrainOverlay";
-import { Header } from "@/components/shell/Header";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { useSafeMode } from "@/hooks/useSafeMode";
-import { samplePiece } from "@/lib/samplePiece";
+import { useAppStore } from "@/store/useAppStore";
 
-export default function FinishedPiecePage() {
-  const { isSafe } = useSafeMode();
-  const reducedMotion = useReducedMotion();
-  const titleId = useId();
+const EASE = [0.22, 1, 0.36, 1] as const;
 
-  // Safe Mode and the OS-level reduced-motion preference each independently
-  // switch parallax off — either one is enough.
-  const parallaxEnabled = !isSafe && !reducedMotion;
+/**
+ * The whole product is one page driven by `view` — no Next.js route changes,
+ * so transitions stay fluid and the demo can never 404 on a bad deploy path.
+ * Each screen owns its own full chrome (Header/main/Footer); this component
+ * only ever decides which one is mounted.
+ */
+export default function AppOrchestrator() {
+  const view = useAppStore((state) => state.view);
+  const fragments = useAppStore((state) => state.fragments);
+
+  // Established once, here, at the top of the tree — so it's already correct
+  // in the store before any screen-specific content (e.g. a fragment card
+  // deciding whether to animate its entrance) ever gets a chance to mount
+  // and read a stale default first.
+  useReducedMotion();
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="app">
-        <Header />
-
-        <main className="stage">
-          <div className="stage__piece">
-            <PieceCanvas
-              piece={samplePiece}
-              parallaxEnabled={parallaxEnabled}
-              titleId={titleId}
-            />
-          </div>
-
-          <aside className="rail" aria-label="Piece details">
-            <JourneyPanel steps={samplePiece.journey} />
-            <ExportPanel />
-            <QuotePanel />
-          </aside>
-        </main>
-
-        <Footer />
-      </div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={view}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.28, ease: EASE }}
+        >
+          {view === "flood" ? <FloodScreen /> : null}
+          {view === "constellation" ? <ConstellationScreen fragments={fragments} /> : null}
+          {view === "momentum" ? (
+            <MomentumScreen cluster={null} fragments={fragments} />
+          ) : null}
+          {view === "ship" ? (
+            <ShipScreen cluster={null} fragments={fragments} form={null} />
+          ) : null}
+          {view === "finished" ? <FinishedPieceScreen /> : null}
+        </motion.div>
+      </AnimatePresence>
 
       <GrainOverlay />
     </MotionConfig>
