@@ -1528,3 +1528,540 @@ button:disabled {
     display: none;
   }
 }
+
+/* ============================================================================
+   PHASE 3 — FLOOD CAPTURE
+   Same tokens, same type system as the Finished Piece screen — but the mood
+   shifts from "still, completed archive" to "alive, in motion, generative."
+   Conveyed entirely through motion, never new colour.
+   ========================================================================= */
+
+/* --- stage / layout --------------------------------------------------------- */
+
+.flood-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 20px 120px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair) transparent;
+}
+
+.flood-stage::-webkit-scrollbar {
+  width: 6px;
+}
+.flood-stage::-webkit-scrollbar-track {
+  background: transparent;
+}
+.flood-stage::-webkit-scrollbar-thumb {
+  background: var(--blood-deep);
+  border-radius: 999px;
+}
+
+.flood-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  width: 100%;
+}
+
+/* --- capture dock ------------------------------------------------------------ */
+
+.capture-dock {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.capture-surface {
+  background: var(--ink-panel);
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  padding: 20px;
+  min-height: 96px;
+  box-shadow: var(--elev-panel);
+  transition: border-color 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.capture-surface:focus-within {
+  border-color: var(--hair-lit);
+}
+
+.capture-field {
+  position: relative;
+}
+
+.capture-field__input,
+.capture-field__overlay {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.6;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.capture-field__input {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: var(--paper);
+  caret-color: var(--paper);
+}
+
+.capture-field__input::placeholder {
+  color: var(--paper-faint);
+}
+
+/* Deliberately no focus override here — the global :focus-visible rule
+   (2px --ember ring) must reach every focusable element, including this
+   one; the capture-surface's :focus-within border brightening above is a
+   bonus, not a replacement for it. */
+
+/* Voice is live: the real (invisible) textarea keeps the cursor and the real
+   editable value; the styled overlay beneath shows committed + interim text
+   merged into one visual stream. */
+.capture-field__input[data-voice-active="true"] {
+  color: transparent;
+}
+
+.capture-field__overlay {
+  position: absolute;
+  inset: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  pointer-events: none;
+  color: var(--paper);
+}
+
+.capture-field__interim {
+  /* Live, functional feedback that speech is being heard right now — the one
+     exception to "nothing pulses faster than 4s" from Phase 1, because this
+     is proof-of-life, not decoration. Do not remove this note when tidying
+     motion rules later. */
+  color: var(--paper-dim);
+  font-style: italic;
+}
+
+/* --- controls row ------------------------------------------------------------- */
+
+.capture-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.capture-counter {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: var(--ui-tracking);
+  text-transform: uppercase;
+  color: var(--paper-faint);
+  white-space: nowrap;
+}
+
+.catch-it-button {
+  flex: none;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--blood-bright);
+  color: var(--ink-void);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.catch-it-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -8px rgb(var(--blood-bright-rgb) / 55%);
+}
+
+.catch-it-button:active {
+  transform: translateY(0);
+}
+
+.capture-note {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: var(--paper-faint);
+  line-height: 1.5;
+}
+
+/* --- voice toggle --------------------------------------------------------------- */
+
+.voice-toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--blood-core);
+  color: var(--paper);
+  box-shadow: var(--elev);
+  transition: background-color 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.voice-toggle[data-listening="true"] {
+  background: var(--blood-bright);
+  animation: mic-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes mic-breathe {
+  0%,
+  100% {
+    box-shadow: var(--elev), 0 0 0 0 rgb(var(--blood-bright-rgb) / 45%);
+  }
+  50% {
+    box-shadow: var(--elev), 0 0 0 12px rgb(var(--blood-bright-rgb) / 0%);
+  }
+}
+
+/* Reduced motion keeps the listening signal (solid colour swap already
+   above) but drops the breathing animation itself. */
+@media (prefers-reduced-motion: reduce) {
+  .voice-toggle[data-listening="true"] {
+    animation: none;
+  }
+}
+
+[data-theme="safe"] .voice-toggle[data-listening="true"] {
+  animation: none;
+}
+
+/* --- flood canvas ------------------------------------------------------------------ */
+
+.flood-canvas {
+  width: 100%;
+  max-width: 1400px;
+  columns: 3;
+  column-gap: 16px;
+}
+
+.flood-canvas--pending {
+  min-height: 1px;
+}
+
+.flood-canvas--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: 32px;
+}
+
+.flood-canvas__empty-copy {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--paper-dim);
+  text-align: center;
+  max-width: 40ch;
+}
+
+/* --- fragment card ------------------------------------------------------------------ */
+
+.fragment-card {
+  position: relative;
+  margin: 0 0 16px;
+  padding: 14px;
+  background: var(--ink-panel);
+  border: 1px solid rgb(var(--blood-deep-rgb) / 40%);
+  border-radius: 8px;
+  box-shadow: var(--elev-panel);
+}
+
+.fragment-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  height: 12px;
+  margin-bottom: 6px;
+}
+
+.fragment-card__mode {
+  color: var(--paper-faint);
+  flex: none;
+}
+
+.fragment-card__remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin: -6px -6px 0 0;
+  border-radius: 4px;
+  color: var(--paper-faint);
+  opacity: 0;
+  transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fragment-card:hover .fragment-card__remove,
+.fragment-card:focus-within .fragment-card__remove,
+.fragment-card__remove:focus-visible {
+  opacity: 1;
+}
+
+.fragment-card__remove:hover {
+  color: var(--blood-bright);
+}
+
+.fragment-card__abandoned {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: rgb(var(--blood-deep-rgb) / 70%);
+  text-underline-offset: 3px;
+}
+
+.fragment-card__text {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--paper);
+  max-height: 90px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 68%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 68%, transparent 100%);
+}
+
+/* --- catch-this-flood CTA (portal-rendered, fixed to viewport) --------------------- */
+
+.catch-flood-wrap {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.catch-flood-hint {
+  max-width: 220px;
+  padding: 8px 12px;
+  background: var(--ink-panel);
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--paper-dim);
+  text-align: right;
+  box-shadow: var(--elev-panel);
+}
+
+.catch-flood-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--blood-core);
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  box-shadow: var(--elev);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.catch-flood-cta:hover {
+  background: var(--blood-bright);
+  transform: translateY(-2px);
+}
+
+.catch-flood-cta__arrow {
+  font-size: 15px;
+}
+
+.catch-flood-cta__badge {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgb(var(--paper-rgb) / 16%);
+  font-size: 11px;
+}
+
+/* --- toast (portal-rendered, fixed to viewport) --------------------------------------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 20;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: calc(100vw - 40px);
+  padding: 12px 16px;
+  background: var(--ink-raise);
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  box-shadow: var(--elev);
+  overflow: hidden;
+}
+
+.toast__message {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--paper);
+  white-space: nowrap;
+}
+
+.toast__action {
+  flex: none;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blood-bright);
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.toast__action:hover {
+  color: var(--blood-glow);
+}
+
+.toast__progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--blood-deep);
+  transform-origin: left;
+  animation: toast-progress linear forwards;
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* --- loading placeholder screens (Constellation / Momentum / Ship) ------------------- */
+
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 20px;
+}
+
+.loading-screen__stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+}
+
+.loading-screen__bloom {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgb(var(--blood-glow-rgb) / 30%) 0%,
+    rgb(var(--blood-core-rgb) / 14%) 45%,
+    transparent 72%
+  );
+  filter: blur(4px);
+  animation: moon-bloom 12s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+
+.loading-screen__label {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 20px;
+  color: var(--paper-dim);
+  letter-spacing: 0.01em;
+}
+
+[data-theme="safe"] .loading-screen__bloom {
+  animation: none;
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-screen__bloom {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
+/* --- Phase 3 responsive ---------------------------------------------------------------- */
+
+@media (max-width: 1023px) {
+  .flood-canvas {
+    columns: 2;
+  }
+}
+
+@media (max-width: 639px) {
+  .flood-canvas {
+    columns: 1;
+  }
+
+  .capture-controls {
+    flex-wrap: wrap;
+  }
+
+  .catch-flood-wrap {
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .toast {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    transform: none;
+    max-width: none;
+  }
+}
