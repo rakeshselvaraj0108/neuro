@@ -1,0 +1,1530 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   CATCH THE FLOOD — DESIGN SYSTEM
+   "blood moon archive": a near-black canvas lit by crimson. A limited-edition
+   letterpress poem under a red moon. Restrained, expensive, never kitsch.
+
+   Themes are a token swap on <html data-theme>, never a second component tree.
+   ========================================================================= */
+
+:root,
+[data-theme="blood"] {
+  /* --- ink -------------------------------------------------------------- */
+  --ink-void: #070406;
+  --ink-deep: #0c0709;
+  --ink-panel: #120a0d;
+  --ink-raise: #1a0f13;
+
+  /* --- blood ------------------------------------------------------------ */
+  --blood-core: #c1121f;
+  --blood-bright: #e63946;
+  /* Reserved. The creator's verbatim words and nothing else, app-wide. */
+  --blood-glow: #ff5c4d;
+  --blood-deep: #6b0f16;
+
+  /* --- warm accent ------------------------------------------------------ */
+  --ember: #f2a65a;
+
+  /* --- paper ------------------------------------------------------------ */
+  --paper: #ede4dc;
+  --paper-dim: #a99c95;
+  /* Lifted from the brief's #6B6058 (3.3:1) to clear the 4.5:1 contrast law
+     at the 10-11px sizes this token is actually used at. Now 5.2:1 on
+     --ink-void and 5.0:1 on --ink-panel. */
+  --paper-faint: #8a7e76;
+
+  /* --- alpha channels for the above ------------------------------------- */
+  --blood-deep-rgb: 107 15 22;
+  --blood-bright-rgb: 230 57 70;
+  --blood-glow-rgb: 255 92 77;
+  --blood-core-rgb: 193 18 31;
+  --ember-rgb: 242 166 90;
+  --paper-rgb: 237 228 220;
+  --ink-panel-rgb: 18 10 13;
+  --ink-void-rgb: 7 4 6;
+
+  /* --- hairlines: always exactly 1px, blood-deep at 40-60% -------------- */
+  --hair: rgb(var(--blood-deep-rgb) / 55%);
+  --hair-soft: rgb(var(--blood-deep-rgb) / 40%);
+  --hair-lit: rgb(var(--blood-bright-rgb) / 46%);
+
+  /* --- elevation: tight shadow + wide ambient + 1px inset hairline ------ */
+  --elev: 0 8px 18px -6px rgb(0 0 0 / 78%), 0 48px 88px -36px rgb(0 0 0 / 70%),
+    inset 0 0 0 1px rgb(var(--blood-deep-rgb) / 40%);
+  --elev-panel: 0 8px 16px -10px rgb(0 0 0 / 72%),
+    0 48px 72px -44px rgb(0 0 0 / 66%),
+    inset 0 0 0 1px rgb(var(--blood-deep-rgb) / 40%);
+
+  /* --- reading surface --------------------------------------------------- */
+  --piece-size: 20px;
+  --piece-leading: 1.75;
+  --ui-tracking: 0.14em;
+
+  /* --- backdrop intensity (dialled right down in safe mode) ------------- */
+  --moon-opacity: 1;
+  --grain-opacity: 0.03;
+
+  color-scheme: dark;
+}
+
+/* ============================================================================
+   SAFE MODE — a first-class second theme, not a degraded fallback.
+   Same layout, same components, same ornament. Only the palette changes.
+   ========================================================================= */
+
+[data-theme="safe"] {
+  --ink-void: #f7f3ef;
+  --ink-deep: #fdfbf9;
+  --ink-panel: #fffdfb;
+  --ink-raise: #efe7e0;
+
+  --blood-core: #8a2e22;
+  --blood-bright: #9a3f32;
+  --blood-glow: #a33b27;
+  --blood-deep: #d3bbb0;
+
+  --ember: #a95f22;
+
+  --paper: #1c1917;
+  --paper-dim: #57504b;
+  --paper-faint: #6e645d;
+
+  --blood-deep-rgb: 190 160 146;
+  --blood-bright-rgb: 154 63 50;
+  --blood-glow-rgb: 163 59 39;
+  --blood-core-rgb: 138 46 34;
+  --ember-rgb: 169 95 34;
+  --paper-rgb: 28 25 23;
+  --ink-panel-rgb: 255 253 251;
+  --ink-void-rgb: 247 243 239;
+
+  --hair: rgb(var(--blood-deep-rgb) / 78%);
+  --hair-soft: rgb(var(--blood-deep-rgb) / 55%);
+  --hair-lit: rgb(var(--blood-bright-rgb) / 42%);
+
+  --elev: 0 8px 18px -10px rgb(74 52 44 / 18%),
+    0 48px 80px -44px rgb(74 52 44 / 22%),
+    inset 0 0 0 1px rgb(var(--blood-deep-rgb) / 55%);
+  --elev-panel: 0 8px 16px -12px rgb(74 52 44 / 14%),
+    0 48px 72px -52px rgb(74 52 44 / 18%),
+    inset 0 0 0 1px rgb(var(--blood-deep-rgb) / 45%);
+
+  /* Raised reading size and leading, as specified. */
+  --piece-size: 21px;
+  --piece-leading: 1.9;
+
+  --moon-opacity: 0.42;
+  --grain-opacity: 0;
+
+  color-scheme: light;
+}
+
+/* ============================================================================
+   DYSLEXIA-FRIENDLY TYPEFACE — system stack, no webfont, no network cost.
+   ========================================================================= */
+
+[data-font="dyslexic"] {
+  --font-ui: "Atkinson Hyperlegible", "Atkinson Hyperlegible Next", Verdana,
+    Tahoma, system-ui, sans-serif;
+  --font-serif: "Atkinson Hyperlegible", "Atkinson Hyperlegible Next", Verdana,
+    Tahoma, system-ui, sans-serif;
+  --font-display: "Atkinson Hyperlegible", "Atkinson Hyperlegible Next",
+    Verdana, Tahoma, system-ui, sans-serif;
+  --ui-tracking: 0.16em;
+}
+
+[data-font="dyslexic"] .piece-body {
+  letter-spacing: 0.02em;
+  word-spacing: 0.09em;
+}
+
+[data-font="dyslexic"] .piece-title__line {
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+/* ============================================================================
+   BASE
+   ========================================================================= */
+
+* {
+  min-width: 0;
+}
+
+html {
+  background: var(--ink-void);
+  /* Nothing may overflow horizontally between 320px and 2560px. */
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--ink-void);
+  color: var(--paper);
+  font-family: var(--font-ui);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::selection {
+  background: rgb(var(--blood-bright-rgb) / 28%);
+  color: var(--paper);
+}
+
+/* Visible focus at every keyboard stop. */
+:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================================
+   TYPE PRIMITIVES
+   ========================================================================= */
+
+.t-label {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: var(--ui-tracking);
+  text-transform: uppercase;
+  color: var(--paper-faint);
+}
+
+.t-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================================
+   FILM GRAIN — one inline feTurbulence, tiled, fixed, above the backdrops
+   and below every piece of text.
+   ========================================================================= */
+
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============================================================================
+   APP SHELL — header (auto) / content (1fr) / footer (auto)
+   ========================================================================= */
+
+.app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 56px minmax(0, 1fr) 40px;
+  /* A definite height (not just a min-height floor) is what makes the
+     middle row's `1fr` actually cap at the leftover viewport space per the
+     CSS Grid sizing algorithm — otherwise the row sizes to content and the
+     whole page grows past one screen. Content that still doesn't fit at
+     that height scrolls inside the canvas, not the page. */
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Below the rail breakpoint the design intentionally becomes a normal
+   scrolling stacked page (see the 899px query for .stage__piece etc.), so
+   the outer shell reverts to a floor rather than a hard cap. */
+@media (max-width: 899px) {
+  .app {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+/* --- header ---------------------------------------------------------------- */
+
+.appbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 56px;
+  padding: 0 20px;
+  background: transparent;
+  border-bottom: 1px solid var(--hair);
+}
+
+.appbar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  /* --blood-core is 3.3:1 at this size; --blood-bright clears 4.9:1. */
+  color: var(--blood-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.rule-v {
+  width: 1px;
+  height: 18px;
+  background: var(--hair);
+  flex: none;
+}
+
+.tagline {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--paper-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- status pill ----------------------------------------------------------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  background: var(--ink-panel);
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: var(--ui-tracking);
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.pill__icon {
+  color: var(--blood-bright);
+  flex: none;
+}
+
+.pill__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* --- main stage ------------------------------------------------------------ */
+
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  /* Explicit (not implicit-auto) so the row is bounded by .app's 1fr share
+     instead of growing to fit content — content that doesn't fit scrolls
+     inside the canvas instead of pushing the header/footer off-screen. */
+  grid-template-rows: minmax(0, 1fr);
+  gap: 20px;
+  padding: 20px;
+  min-height: 0;
+  width: 100%;
+  max-width: 1760px;
+  margin-inline: auto;
+}
+
+.stage__piece {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+}
+
+/* ============================================================================
+   PIECE CANVAS
+   ========================================================================= */
+
+.canvas-mount {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  perspective: 1400px;
+  perspective-origin: 50% 50%;
+}
+
+.canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  background: var(--ink-deep);
+  box-shadow: var(--elev);
+  overflow: hidden;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Second frame, 8px inward. */
+.canvas__inset {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid var(--hair-soft);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.canvas__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  /* Falls back cleanly to plain `center` in engines that don't yet parse the
+     `safe` keyword — the declaration above simply wins there instead. */
+  align-items: safe center;
+  height: 100%;
+  min-height: 0;
+  padding: clamp(20px, 2.4vw, 36px);
+  transform: translateZ(14px);
+  /* The frame, flourishes and seal are fixed; only the reading column
+     scrolls, and only when a viewport is too short to show it whole. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair) transparent;
+}
+
+.canvas__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.canvas__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.canvas__content::-webkit-scrollbar-thumb {
+  background: var(--blood-deep);
+  border-radius: 999px;
+}
+
+.piece {
+  width: 46%;
+  min-width: 0;
+  flex: none;
+}
+
+/* --- title ----------------------------------------------------------------- */
+
+.piece-title {
+  margin: 0;
+  /* Optical hang: pull the cap edge back to the true left margin. */
+  margin-left: -0.035em;
+}
+
+.piece-title__line {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(40px, 5vw, 68px);
+  line-height: 0.92;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--blood-core);
+  text-wrap: balance;
+}
+
+/* --- moon divider ---------------------------------------------------------- */
+
+.moon-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 20px;
+  color: var(--blood-deep);
+}
+
+.moon-divider__rule {
+  height: 1px;
+  background: var(--hair);
+  flex: 1;
+}
+
+.moon-divider__rule--short {
+  flex: 0 0 24px;
+}
+
+.moon-divider__glyph {
+  flex: none;
+  opacity: 0.9;
+}
+
+/* --- body ------------------------------------------------------------------ */
+
+.piece-body {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: var(--piece-size);
+  line-height: var(--piece-leading);
+  color: var(--paper);
+  letter-spacing: 0.005em;
+}
+
+.piece-stanza {
+  margin: 0;
+}
+
+.piece-stanza + .piece-stanza {
+  margin-top: 24px;
+}
+
+.piece-line {
+  display: block;
+}
+
+/* The reserved colour. Nothing else in this app may use --blood-glow. */
+.verbatim {
+  color: var(--blood-glow);
+  font-style: inherit;
+  text-shadow: 0 0 18px rgb(var(--blood-glow-rgb) / 26%);
+  background: none;
+}
+
+[data-theme="safe"] .verbatim {
+  text-shadow: none;
+  font-weight: 600;
+  /* Never colour alone: safe mode underlines the creator's own words. */
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: rgb(var(--blood-glow-rgb) / 40%);
+}
+
+.stanza-rule {
+  width: 92px;
+  height: 1px;
+  margin: 24px 0;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    var(--hair),
+    rgb(var(--blood-deep-rgb) / 12%)
+  );
+}
+
+/* ============================================================================
+   MOON BACKDROP — CSS + SVG only. Zero images.
+   ========================================================================= */
+
+.backdrop {
+  position: absolute;
+  inset: 0 0 0 34%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  transform: translateZ(-24px) scale(1.03);
+  opacity: var(--moon-opacity);
+  /* Dissolve into the canvas well before the text column. */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgb(0 0 0 / 22%) 16%,
+    rgb(0 0 0 / 72%) 34%,
+    #000 56%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgb(0 0 0 / 22%) 16%,
+    rgb(0 0 0 / 72%) 34%,
+    #000 56%
+  );
+  transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Slow atmospheric bloom, 12s, ease-in-out, infinite. */
+.backdrop__bloom {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(
+      circle at 74% 20%,
+      rgb(var(--blood-glow-rgb) / 22%) 0%,
+      rgb(var(--blood-core-rgb) / 10%) 34%,
+      transparent 62%
+    ),
+    radial-gradient(
+      circle at 88% 6%,
+      rgb(var(--blood-bright-rgb) / 16%) 0%,
+      transparent 48%
+    );
+  opacity: 0.5;
+  animation: moon-bloom 12s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+
+.backdrop__disc {
+  position: absolute;
+  top: 8%;
+  right: 12%;
+  width: clamp(120px, 15vw, 224px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 38% 32%,
+    #d4303a 0%,
+    var(--blood-core) 34%,
+    #7c0f18 68%,
+    #4a070c 100%
+  );
+  box-shadow: 0 0 60px 12px rgb(var(--blood-core-rgb) / 26%),
+    0 0 160px 48px rgb(var(--blood-core-rgb) / 14%);
+}
+
+/* Faint maria, so the disc reads as a body rather than a dot. */
+.backdrop__disc::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+      circle at 66% 62%,
+      rgb(0 0 0 / 22%) 0%,
+      transparent 34%
+    ),
+    radial-gradient(circle at 30% 70%, rgb(0 0 0 / 16%) 0%, transparent 26%);
+}
+
+.backdrop__silhouettes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.backdrop__vignette {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+      to bottom,
+      rgb(var(--ink-void-rgb) / 62%) 0%,
+      transparent 26%,
+      transparent 58%,
+      rgb(var(--ink-void-rgb) / 88%) 100%
+    ),
+    radial-gradient(
+      ellipse 78% 62% at 62% 46%,
+      transparent 40%,
+      rgb(var(--ink-void-rgb) / 62%) 100%
+    );
+}
+
+@keyframes moon-bloom {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
+
+/* ============================================================================
+   ORNAMENT — flourishes and wax seal
+   ========================================================================= */
+
+.flourish {
+  position: absolute;
+  z-index: 4;
+  color: var(--blood-deep);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.flourish--tl {
+  top: 16px;
+  left: 16px;
+}
+.flourish--tr {
+  top: 16px;
+  right: 16px;
+  transform: scaleX(-1);
+}
+.flourish--bl {
+  bottom: 16px;
+  left: 16px;
+  transform: scaleY(-1);
+}
+.flourish--br {
+  bottom: 16px;
+  right: 16px;
+  transform: scale(-1);
+}
+
+.seal {
+  position: absolute;
+  right: 32px;
+  bottom: 32px;
+  z-index: 3;
+  width: 78px;
+  height: 78px;
+  color: var(--blood-deep);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.seal__text {
+  font-family: var(--font-ui);
+  font-size: 6.2px;
+  font-weight: 600;
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+  fill: var(--blood-deep);
+}
+
+/* ============================================================================
+   RIGHT RAIL
+   ========================================================================= */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+  /* Bounded to the same row as the canvas — if the three panels together
+     need more room than that (a short window, larger accessibility text),
+     the rail scrolls internally rather than pushing the footer off-screen. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair) transparent;
+  /* A little breathing room so the scrollbar doesn't sit flush on panels. */
+  padding-right: 2px;
+}
+
+.rail::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rail::-webkit-scrollbar-thumb {
+  background: var(--blood-deep);
+  border-radius: 999px;
+}
+
+.panel {
+  position: relative;
+  padding: 16px;
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  background: rgb(var(--ink-panel-rgb) / 88%);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--elev-panel);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.panel:hover {
+  transform: translateY(-2px);
+  border-color: var(--hair-lit);
+}
+
+.panel__label {
+  margin-bottom: 12px;
+}
+
+/* --- journey timeline ------------------------------------------------------ */
+
+.journey {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.journey__node {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.journey__node:last-child {
+  padding-bottom: 0;
+}
+
+/* The spine segment rising out of each node toward the one above. */
+.journey__spine {
+  position: absolute;
+  left: 10px;
+  top: 22px;
+  bottom: 0;
+  width: 2px;
+  background: var(--blood-deep);
+  border-radius: 1px;
+}
+
+.journey__spine--lit {
+  background: rgb(var(--blood-bright-rgb) / 50%);
+}
+
+.journey__chip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--hair);
+  background: var(--ink-raise);
+  color: var(--paper-dim);
+}
+
+.journey__chip--done {
+  border-color: var(--blood-bright);
+  background: rgb(var(--blood-bright-rgb) / 14%);
+  color: var(--blood-bright);
+}
+
+/* Redundant check glyph: completion is never signalled by colour alone. */
+.journey__check {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--blood-bright);
+  color: var(--ink-void);
+}
+
+[data-theme="safe"] .journey__check {
+  color: #fffdfb;
+}
+
+.journey__title {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: var(--ui-tracking);
+  text-transform: uppercase;
+  color: var(--blood-bright);
+  line-height: 1.3;
+}
+
+.journey__subtitle {
+  margin-top: 4px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--paper-dim);
+  line-height: 1.4;
+}
+
+/* --- export rows ----------------------------------------------------------- */
+
+.export {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export__row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  text-align: left;
+  transition: background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.export__row:hover:not(:disabled) {
+  background: var(--ink-raise);
+  border-color: var(--hair-soft);
+}
+
+.export__row:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.export__row:disabled {
+  opacity: 0.55;
+}
+
+.export__name {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--paper);
+  line-height: 1.3;
+}
+
+.export__sub {
+  margin-top: 2px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--paper-faint);
+  line-height: 1.3;
+}
+
+.export__trail {
+  color: var(--paper-faint);
+  transition: color 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.export__row:hover:not(:disabled) .export__trail {
+  color: var(--blood-bright);
+}
+
+.icon-tile {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--ink-raise);
+  color: var(--blood-bright);
+  flex: none;
+  transition: background-color 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.export__row:hover:not(:disabled) .icon-tile {
+  background: rgb(var(--blood-bright-rgb) / 14%);
+}
+
+/* --- closing quote --------------------------------------------------------- */
+
+.quote {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 16px 16px;
+  text-align: center;
+}
+
+.quote__mark {
+  position: absolute;
+  font-family: var(--font-serif);
+  font-size: 54px;
+  line-height: 1;
+  color: var(--blood-deep);
+  opacity: 0.3;
+  user-select: none;
+}
+
+.quote__mark--open {
+  top: 4px;
+  left: 4px;
+}
+
+.quote__mark--close {
+  right: 4px;
+  bottom: 12px;
+}
+
+.quote__soft {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--paper);
+}
+
+.quote__loud {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: var(--blood-bright);
+}
+
+.quote__loud--sm {
+  font-size: 18px;
+}
+
+.quote__flame {
+  margin-top: 8px;
+  color: var(--blood-deep);
+}
+
+/* ============================================================================
+   FOOTER
+   ========================================================================= */
+
+.footbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 40px;
+  padding: 0 20px;
+  border-top: 1px solid var(--hair);
+}
+
+.footbar__group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.footbar__brand {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--blood-bright);
+  white-space: nowrap;
+}
+
+.footbar__text {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--paper-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footbar__flame {
+  color: var(--blood-bright);
+  flex: none;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  color: var(--paper-faint);
+  flex: none;
+  transition: color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.icon-button:hover,
+.icon-button[aria-expanded="true"] {
+  color: var(--blood-bright);
+  background: var(--ink-raise);
+  border-color: var(--hair-soft);
+}
+
+/* ============================================================================
+   SAFE MODE POPOVER
+   ========================================================================= */
+
+.popover-anchor {
+  position: relative;
+  flex: none;
+}
+
+.popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  z-index: 30;
+  width: 296px;
+  max-width: calc(100vw - 40px);
+  padding: 16px;
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  background: rgb(var(--ink-panel-rgb) / 96%);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--elev);
+  text-align: left;
+}
+
+.popover__title {
+  margin-bottom: 4px;
+}
+
+.popover__intro {
+  margin: 0 0 16px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--paper-dim);
+}
+
+.switch-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px;
+  margin-left: -8px;
+  width: calc(100% + 16px);
+  border-radius: 4px;
+  text-align: left;
+  transition: background-color 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.switch-row:hover:not(:disabled) {
+  background: var(--ink-raise);
+}
+
+.switch-row:disabled {
+  opacity: 0.55;
+}
+
+.switch-row__name {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--paper);
+  line-height: 1.3;
+}
+
+.switch-row__hint {
+  margin-top: 2px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--paper-faint);
+  line-height: 1.4;
+}
+
+.switch {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--hair);
+  background: var(--ink-raise);
+  flex: none;
+  transition: background-color 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.switch[data-on="true"] {
+  background: rgb(var(--blood-bright-rgb) / 26%);
+  border-color: var(--blood-bright);
+}
+
+.switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--paper-dim);
+  color: var(--ink-void);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.switch[data-on="true"] .switch__knob {
+  transform: translateX(16px);
+  background: var(--blood-bright);
+}
+
+[data-theme="safe"] .switch__knob {
+  color: #fffdfb;
+}
+
+.popover__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hair-soft);
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--paper-faint);
+}
+
+/* ============================================================================
+   MOTION LAW
+   Every transition 200-400ms, cubic-bezier(0.22, 1, 0.36, 1).
+   Nothing bounces. Nothing flashes. Nothing pulses faster than 4 seconds.
+   ========================================================================= */
+
+@keyframes node-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.journey__node {
+  animation: node-rise 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--stagger-index, 0) * 60ms);
+}
+
+/* Safe mode disables parallax, bloom, grain and every stagger. */
+[data-theme="safe"] .journey__node {
+  animation: none;
+}
+
+[data-theme="safe"] .backdrop__bloom {
+  animation: none;
+  opacity: 0.62;
+}
+
+[data-theme="safe"] .backdrop__disc {
+  box-shadow: 0 0 60px 16px rgb(var(--blood-core-rgb) / 12%);
+}
+
+[data-theme="safe"] .grain {
+  display: none;
+}
+
+/* prefers-reduced-motion is honoured independently of Safe Mode. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .journey__node {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .backdrop__bloom {
+    animation: none;
+    opacity: 0.62;
+  }
+}
+
+/* ============================================================================
+   RESPONSIVE
+   >=1200  as specified
+   900-1199  rail 260px, piece column 52%
+   600-899   rail moves below the canvas as a horizontal scroll row
+   <600      full vertical stack
+   ========================================================================= */
+
+@media (max-width: 1199px) {
+  .stage {
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+
+  .piece {
+    width: 52%;
+  }
+
+  .backdrop {
+    inset: 0 0 0 42%;
+  }
+}
+
+@media (max-width: 899px) {
+  .app {
+    grid-template-rows: 56px auto 40px;
+  }
+
+  .stage {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    gap: 20px;
+  }
+
+  /* Below the rail breakpoint the whole page scrolls normally — the canvas
+     grows with its content instead of internally scrolling its own text. */
+  .stage__piece,
+  .canvas-mount,
+  .canvas {
+    height: auto;
+  }
+
+  .canvas {
+    min-height: 560px;
+  }
+
+  .canvas__content {
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .canvas-mount {
+    perspective: none;
+  }
+
+  .piece {
+    width: 100%;
+    padding-bottom: 64px;
+  }
+
+  /* Right zone reduces to a top-corner moon bloom only. */
+  .backdrop {
+    inset: 0;
+    -webkit-mask-image: radial-gradient(
+      ellipse 62% 46% at 88% 6%,
+      #000 0%,
+      rgb(0 0 0 / 55%) 46%,
+      transparent 78%
+    );
+    mask-image: radial-gradient(
+      ellipse 62% 46% at 88% 6%,
+      #000 0%,
+      rgb(0 0 0 / 55%) 46%,
+      transparent 78%
+    );
+  }
+
+  .backdrop__silhouettes,
+  .backdrop__vignette {
+    display: none;
+  }
+
+  .backdrop__disc {
+    top: 4%;
+    right: 6%;
+    width: clamp(96px, 22vw, 160px);
+  }
+
+  /* Rail becomes a horizontal scroll row with edge fade masks. */
+  .rail {
+    flex-direction: row;
+    gap: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 24px;
+    margin-inline: -24px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 24px,
+      #000 calc(100% - 24px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 24px,
+      #000 calc(100% - 24px),
+      transparent 100%
+    );
+  }
+
+  .rail > * {
+    flex: 0 0 280px;
+    width: 280px;
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 599px) {
+  :root,
+  [data-theme="blood"] {
+    /* Piece text never drops below 18px. */
+    --piece-size: 18px;
+  }
+
+  [data-theme="safe"] {
+    --piece-size: 19px;
+  }
+
+  .appbar {
+    padding: 0 16px;
+    gap: 8px;
+  }
+
+  .appbar .tagline,
+  .appbar .rule-v {
+    display: none;
+  }
+
+  .wordmark {
+    font-size: 13px;
+  }
+
+  .pill {
+    gap: 6px;
+    padding: 0 10px;
+    max-width: 58%;
+  }
+
+  .stage {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .canvas {
+    min-height: 0;
+  }
+
+  .canvas__content {
+    padding: 20px;
+    transform: none;
+  }
+
+  .piece {
+    padding-bottom: 72px;
+  }
+
+  .piece-title__line {
+    font-size: clamp(30px, 10.5vw, 44px);
+  }
+
+  .seal {
+    right: 16px;
+    bottom: 16px;
+    width: 56px;
+    height: 56px;
+  }
+
+  .seal__text {
+    font-size: 6px;
+    letter-spacing: 1.2px;
+  }
+
+  .flourish {
+    transform-origin: center;
+  }
+
+  .flourish--tl,
+  .flourish--tr,
+  .flourish--bl,
+  .flourish--br {
+    inset: auto;
+  }
+
+  .flourish--tl {
+    top: 12px;
+    left: 12px;
+  }
+  .flourish--tr {
+    top: 12px;
+    right: 12px;
+    transform: scaleX(-1);
+  }
+  .flourish--bl {
+    bottom: 12px;
+    left: 12px;
+    transform: scaleY(-1);
+  }
+  .flourish--br {
+    bottom: 12px;
+    right: 12px;
+    transform: scale(-1);
+  }
+
+  /* Full vertical stack: panels no longer scroll sideways. */
+  .rail {
+    flex-direction: column;
+    overflow: visible;
+    padding: 0;
+    margin-inline: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .rail > * {
+    flex: none;
+    width: 100%;
+  }
+
+  .footbar {
+    height: auto;
+    min-height: 40px;
+    padding: 8px 16px;
+    gap: 12px;
+  }
+
+  .footbar__group--tagline {
+    display: none;
+  }
+}
+
+@media (max-width: 379px) {
+  .footbar__text {
+    display: none;
+  }
+}
