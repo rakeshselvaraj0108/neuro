@@ -19,6 +19,7 @@ export function CaptureDock() {
   const addFragment = useAppStore((state) => state.addFragment);
   const updateFragmentText = useAppStore((state) => state.updateFragmentText);
   const fragmentCount = useAppStore((state) => state.fragments.length);
+  const setView = useAppStore((state) => state.setView);
 
   const voice = useVoiceCapture();
 
@@ -30,23 +31,21 @@ export function CaptureDock() {
   const [parkedToastKey, setParkedToastKey] = useState<number>(0);
   const previousCountRef = useRef(fragmentCount);
 
-  // Desktop only — auto-focusing on mobile pops the OS keyboard and covers
-  // the screen, which is itself a friction/distress source.
+  // Desktop only auto-focus
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth >= DESKTOP_BREAKPOINT_PX) {
       textareaRef.current?.focus();
     }
   }, []);
 
-  // Permission denied falls back to text mode calmly — the field takes focus
-  // so there's zero extra friction to keep capturing.
+  // Voice permission fallback focus
   useEffect(() => {
     if (voice.permissionDenied) {
       textareaRef.current?.focus();
     }
   }, [voice.permissionDenied]);
 
-  // Auto-grow, no fixed row limit.
+  // Auto-grow height
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -54,7 +53,7 @@ export function CaptureDock() {
     el.style.height = `${el.scrollHeight}px`;
   }, [draftText]);
 
-  // A small scale-pulse whenever the count changes, so it reads as alive.
+  // Count pulse animation
   useEffect(() => {
     if (fragmentCount === previousCountRef.current) return;
     previousCountRef.current = fragmentCount;
@@ -63,7 +62,7 @@ export function CaptureDock() {
     return () => clearTimeout(timer);
   }, [fragmentCount]);
 
-  // Track voice contribution so a mixed voice+typing draft is tagged "voice".
+  // Track voice contribution
   useEffect(() => {
     if (voice.isListening) draftModeRef.current = "voice";
   }, [voice.isListening]);
@@ -77,6 +76,7 @@ export function CaptureDock() {
     const text = draftText.trim();
     if (!text) {
       resetDraftBookkeeping();
+      textareaRef.current?.focus();
       return;
     }
     const isLocked = useAppStore.getState().scopeLocked;
@@ -91,11 +91,13 @@ export function CaptureDock() {
     }
     resetDraftBookkeeping();
     setDraftText("");
+    // Keep focus active in input box for rapid consecutive captures
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 10);
   }, [draftText, addFragment, updateFragmentText, setDraftText, resetDraftBookkeeping]);
 
-  // The 4-second safety-net checkpoint — reads the store directly on each
-  // tick rather than depending on draftText, so continuous typing never
-  // resets or starves this timer.
+  // 4-second checkpoint
   useEffect(() => {
     const interval = setInterval(() => {
       const state = useAppStore.getState();
@@ -113,12 +115,21 @@ export function CaptureDock() {
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        commitDraft();
+        if (fragmentCount + (draftText.trim() ? 1 : 0) >= 1) {
+          setView("constellation");
+        }
+        return;
+      }
+
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         commitDraft();
       }
     },
-    [commitDraft],
+    [commitDraft, fragmentCount, draftText, setView],
   );
 
   const handleBlur = useCallback(() => {
@@ -134,7 +145,7 @@ export function CaptureDock() {
 
   return (
     <div className="capture-dock">
-      <div className="capture-surface">
+      <div className="capture-surface" onClick={() => textareaRef.current?.focus()}>
         <div className="capture-field">
           <textarea
             ref={textareaRef}
@@ -176,7 +187,12 @@ export function CaptureDock() {
           {fragmentCount === 1 ? "idea" : "ideas"} caught
         </span>
 
-        <button type="button" className="catch-it-button" onClick={commitDraft}>
+        <button
+          type="button"
+          className="catch-it-button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={commitDraft}
+        >
           Catch it
         </button>
       </div>
