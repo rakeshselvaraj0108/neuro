@@ -11,18 +11,17 @@ import { Header } from "@/components/shell/Header";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useSafeMode } from "@/hooks/useSafeMode";
 import { samplePiece } from "@/lib/samplePiece";
+import type { Piece } from "@/types/domain";
 
-/**
- * The destination, not the entry — moved unchanged from Phase 1's
- * app/page.tsx now that the app is a view-state-machine of screens.
- */
-export function FinishedPieceScreen() {
+export interface FinishedPieceScreenProps {
+  piece?: Piece;
+}
+
+export function FinishedPieceScreen({ piece = samplePiece }: FinishedPieceScreenProps) {
   const { isSafe } = useSafeMode();
   const reducedMotion = useReducedMotion();
   const titleId = useId();
 
-  // Safe Mode and the OS-level reduced-motion preference each independently
-  // switch parallax off — either one is enough.
   const parallaxEnabled = !isSafe && !reducedMotion;
 
   return (
@@ -32,15 +31,15 @@ export function FinishedPieceScreen() {
       <main className="stage">
         <div className="stage__piece">
           <PieceCanvas
-            piece={samplePiece}
+            piece={piece}
             parallaxEnabled={parallaxEnabled}
             titleId={titleId}
           />
         </div>
 
         <aside className="rail" aria-label="Piece details">
-          <JourneyPanel steps={samplePiece.journey} />
-          <ExportPanel />
+          <JourneyPanel steps={piece.journey} />
+          <ExportPanel piece={piece} />
           <QuotePanel />
         </aside>
       </main>
