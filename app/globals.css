@@ -3129,4 +3129,243 @@ button:disabled {
   opacity: 0.5 !important;
 }
 
+/* ============================================================================
+   PHASE 7 — FINISHING LOOP: INLINE EDITING & Targeted STANZA REFINEMENT
+   ========================================================================= */
+
+.edit-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--ink-panel);
+  border: 1px solid var(--hair-lit);
+  border-radius: 20px;
+  color: var(--paper-dim);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: var(--ui-tracking);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-mode-toggle:hover {
+  color: var(--paper);
+  border-color: var(--blood-bright);
+}
+
+.edit-mode-toggle--active {
+  background: rgb(var(--blood-bright-rgb) / 15%);
+  border-color: var(--blood-bright);
+  color: var(--blood-bright);
+}
+
+.piece-undo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px dashed var(--hair-soft);
+  border-radius: 14px;
+  color: var(--paper-faint);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.piece-undo-btn:hover {
+  color: var(--paper);
+  border-color: var(--hair-lit);
+}
+
+/* --- Editable Stanza & Toolbar ------------------------------------------- */
+.editable-stanza {
+  position: relative;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.editable-stanza--edit-mode:hover {
+  background: rgb(var(--ink-raise-rgb) / 40%);
+}
+
+.stanza-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: var(--ink-panel);
+  border: 1px solid var(--hair);
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.stanza-toolbar__btn {
+  background: transparent;
+  border: none;
+  color: var(--paper-dim);
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: var(--ui-tracking);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.stanza-toolbar__btn:hover {
+  color: var(--paper);
+  background: rgb(var(--blood-bright-rgb) / 10%);
+}
+
+.stanza-toolbar__btn--active {
+  color: var(--blood-bright);
+  font-weight: 600;
+}
+
+.stanza-toolbar__btn--remove:hover {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.stanza-toolbar__reorder {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-left: 1px solid var(--hair-soft);
+  padding-left: 6px;
+}
+
+.stanza-toolbar__reorder-btn {
+  background: transparent;
+  border: none;
+  color: var(--paper-faint);
+  font-size: 9px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.stanza-toolbar__reorder-btn:hover:not(:disabled) {
+  color: var(--paper);
+}
+
+.stanza-toolbar__reorder-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* --- Inline Text Editing Textarea ---------------------------------------- */
+.editable-stanza__textarea {
+  width: 100%;
+  background: rgb(var(--ink-panel-rgb) / 80%);
+  color: var(--paper);
+  border: 1px solid var(--blood-bright);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-family: var(--font-cormorant), serif;
+  font-size: 18px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  box-shadow: 0 0 8px rgb(var(--blood-bright-rgb) / 20%);
+}
+
+.editable-stanza__textarea:focus {
+  border-color: var(--blood-bright);
+  box-shadow: 0 0 12px rgb(var(--blood-bright-rgb) / 35%);
+}
+
+/* --- Inline Refine Input Form -------------------------------------------- */
+.refine-input-form {
+  margin-bottom: 12px;
+}
+
+.refine-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refine-input__field {
+  flex: 1;
+  background: var(--ink-void);
+  border: 1px solid var(--hair-lit);
+  border-radius: 4px;
+  padding: 6px 12px;
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-size: 11px;
+}
+
+.refine-input__field:focus {
+  outline: none;
+  border-color: var(--blood-bright);
+}
+
+.refine-input__submit {
+  padding: 6px 12px;
+  background: var(--blood-bright);
+  color: var(--ink-void);
+  border: none;
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.refine-input__cancel {
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--paper-dim);
+  border: none;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* --- Shimmer Overlay ------------------------------------------------------ */
+.stanza-shimmer-overlay {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  margin-top: 4px;
+  background: rgb(var(--blood-bright-rgb) / 10%);
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--blood-bright);
+  animation: pulse-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-shimmer {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* --- Fidelity Meter Pulse ------------------------------------------------- */
+.fidelity-meter--pulse {
+  animation: fidelity-glow 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes fidelity-glow {
+  0% { box-shadow: 0 0 0px var(--blood-bright); }
+  50% { box-shadow: 0 0 16px var(--blood-glow); }
+  100% { box-shadow: 0 0 0px var(--blood-bright); }
+}
+
+[data-safe-mode="true"] .fidelity-meter--pulse,
+.reduced-motion .fidelity-meter--pulse,
+[data-safe-mode="true"] .stanza-shimmer-overlay,
+.reduced-motion .stanza-shimmer-overlay {
+  animation: none !important;
+}
+
+
 

@@ -7,7 +7,8 @@ import { uuid } from "@/lib/uuid";
 import { type StoredPrefs, type ThemeName } from "@/lib/prefs";
 import { fallbackConstellation, fallbackMomentum, fallbackShip } from "@/lib/ai/fallbacks";
 import type { AgentSource } from "@/lib/ai/telemetry";
-import { verifyPiece, type VerifiedPiece, type VerifiedShipResult } from "@/lib/fidelity/verify";
+import { reverifyEditedPiece } from "@/lib/fidelity/reverify";
+import { verifyPiece, type VerifiedPiece, type VerifiedSegment, type VerifiedShipResult } from "@/lib/fidelity/verify";
 import type { CaptureMode, Cluster, Fragment, JourneyStep, Piece } from "@/types/domain";
 
 export type AppView = "flood" | "constellation" | "momentum" | "ship" | "finished";
@@ -83,11 +84,22 @@ interface AppState {
   pieceStatus: PieceStatus;
   pieceSource: AgentSource | null;
 
+  // --- piece edit & refine (Phase 7) ---------------------------------------
+  editMode: boolean;
+  undoSnapshot: VerifiedPiece | null;
+  refiningStanzaIndex: number | null;
+
   setSelectedCluster: (cluster: Cluster | null) => void;
   setMomentumOptions: (options: MomentumOption[]) => void;
   setChosenForm: (form: string | null) => void;
   setGeneratedPiece: (piece: Piece | null) => void;
   generatePiece: (form: string) => Promise<void>;
+  toggleEditMode: () => void;
+  editStanzaLine: (stanzaIndex: number, segmentIndex: number, newText: string) => void;
+  removeStanza: (stanzaIndex: number) => void;
+  reorderStanza: (from: number, to: number) => void;
+  refineStanza: (stanzaIndex: number, instruction: string) => Promise<{ success: boolean; isOffline?: boolean }>;
+  undoLastPieceChange: () => void;
 
   // --- flood / fragments ----------------------------------------------------
   fragments: Fragment[];
@@ -443,6 +455,170 @@ export const useAppStore = create<AppState>()(
           pieceStatus: "ready",
           pieceSource: source,
           view: "finished",
+        });
+      },
+
+      // --- piece edit & refine (Phase 7) ---------------------------------------
+      editMode: false,
+      undoSnapshot: null,
+      refiningStanzaIndex: null,
+
+      toggleEditMode: () => set((state) => ({ editMode: !state.editMode })),
+
+      editStanzaLine: (stanzaIndex: number, segmentIndex: number, newText: string) => {
+        const state = get();
+        if (!state.currentPiece) return;
+
+        const undoSnapshot = state.currentPiece;
+
+        const newStanzas = state.currentPiece.stanzas.map((stanza, sIdx) => {
+          if (sIdx !== stanzaIndex) return stanza;
+          return stanza.map((segment, segIdx) => {
+            if (segIdx !== segmentIndex) return segment;
+            return {
+              ...segment,
+              text: newText,
+              origin: "captured" as const,
+              sourceFragmentId: "__user_edit__",
+              matchScore: 1.0,
+              matchedFragmentId: null,
+            };
+          });
+        });
+
+        const updatedPiece: VerifiedPiece = {
+          ...state.currentPiece,
+          stanzas: newStanzas,
+        };
+
+        const reverified = reverifyEditedPiece(updatedPiece, state.fragments);
+
+        set({
+          currentPiece: reverified,
+          generatedPiece: reverified as unknown as Piece,
+          undoSnapshot,
+        });
+      },
+
+      removeStanza: (stanzaIndex: number) => {
+        const state = get();
+        if (!state.currentPiece) return;
+
+        const undoSnapshot = state.currentPiece;
+        const newStanzas = state.currentPiece.stanzas.filter((_, idx) => idx !== stanzaIndex);
+
+        const updatedPiece: VerifiedPiece = {
+          ...state.currentPiece,
+          stanzas: newStanzas,
+        };
+
+        const reverified = reverifyEditedPiece(updatedPiece, state.fragments);
+
+        set({
+          currentPiece: reverified,
+          generatedPiece: reverified as unknown as Piece,
+          undoSnapshot,
+        });
+      },
+
+      reorderStanza: (from: number, to: number) => {
+        const state = get();
+        if (!state.currentPiece) return;
+        if (from < 0 || from >= state.currentPiece.stanzas.length) return;
+        if (to < 0 || to >= state.currentPiece.stanzas.length) return;
+
+        const undoSnapshot = state.currentPiece;
+        const stanzas = [...state.currentPiece.stanzas];
+        const [moved] = stanzas.splice(from, 1);
+        if (moved) stanzas.splice(to, 0, moved);
+
+        const updatedPiece: VerifiedPiece = {
+          ...state.currentPiece,
+          stanzas,
+        };
+
+        const reverified = reverifyEditedPiece(updatedPiece, state.fragments);
+
+        set({
+          currentPiece: reverified,
+          generatedPiece: reverified as unknown as Piece,
+          undoSnapshot,
+        });
+      },
+
+      refineStanza: async (stanzaIndex: number, instruction: string) => {
+        const state = get();
+        if (!state.currentPiece) return { success: false };
+        const targetStanza = state.currentPiece.stanzas[stanzaIndex];
+        if (!targetStanza) return { success: false };
+
+        const undoSnapshot = state.currentPiece;
+        set({ refiningStanzaIndex: stanzaIndex });
+
+        const clusterId = state.selectedClusterId || state.selectedCluster?.id;
+
+        try {
+          const response = await fetch("/api/ai/refine", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              stanza: targetStanza,
+              instruction,
+              clusterId,
+              fragments: state.fragments,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Refine route failed with status ${response.status}`);
+          }
+
+          const payload = (await response.json()) as {
+            segments: VerifiedSegment[];
+            isOffline?: boolean;
+          };
+
+          if (payload.isOffline) {
+            set({ refiningStanzaIndex: null });
+            return { success: false, isOffline: true };
+          }
+
+          const newStanzas = state.currentPiece.stanzas.map((stanza, idx) =>
+            idx === stanzaIndex ? (payload.segments ?? stanza) : stanza,
+          );
+
+          const updatedPiece: VerifiedPiece = {
+            ...state.currentPiece,
+            stanzas: newStanzas,
+          };
+
+          const reverified = reverifyEditedPiece(updatedPiece, state.fragments);
+
+          set({
+            currentPiece: reverified,
+            generatedPiece: reverified as unknown as Piece,
+            undoSnapshot,
+            refiningStanzaIndex: null,
+          });
+
+          return { success: true };
+        } catch {
+          set({ refiningStanzaIndex: null });
+          return { success: false, isOffline: true };
+        }
+      },
+
+      undoLastPieceChange: () => {
+        const state = get();
+        if (!state.undoSnapshot) return;
+
+        const previousPiece = state.undoSnapshot;
+        const reverified = reverifyEditedPiece(previousPiece, state.fragments);
+
+        set({
+          currentPiece: reverified,
+          generatedPiece: reverified as unknown as Piece,
+          undoSnapshot: null,
         });
       },
 

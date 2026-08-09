@@ -1,9 +1,11 @@
-import { Fragment } from "react";
+"use client";
 
+import { Fragment } from "react";
 import type { PieceSegment } from "@/types/domain";
 import { isRuleStanza } from "@/lib/samplePiece";
-
 import { Verbatim } from "./Verbatim";
+import { EditableStanza } from "./EditableStanza";
+import { useAppStore } from "@/store/useAppStore";
 
 interface PieceBodyProps {
   stanzas: PieceSegment[][];
@@ -13,11 +15,6 @@ interface LineSegment extends PieceSegment {
   key: string;
 }
 
-/**
- * Splits a stanza's segments on embedded `\n` boundaries so each visual line
- * of the poem becomes its own block-level element — proper line-break
- * semantics for a screen reader, rather than a run of `<br />` tags.
- */
 function toLines(stanza: PieceSegment[], stanzaIndex: number): LineSegment[][] {
   const lines: LineSegment[][] = [[]];
 
@@ -39,8 +36,14 @@ function toLines(stanza: PieceSegment[], stanzaIndex: number): LineSegment[][] {
   return lines;
 }
 
-/** Renders the poem body straight from `Piece.stanzas` — no inline JSX text. */
 export function PieceBody({ stanzas }: PieceBodyProps) {
+  const editMode = useAppStore((state) => state.editMode);
+  const refiningStanzaIndex = useAppStore((state) => state.refiningStanzaIndex);
+  const editStanzaLine = useAppStore((state) => state.editStanzaLine);
+  const removeStanza = useAppStore((state) => state.removeStanza);
+  const reorderStanza = useAppStore((state) => state.reorderStanza);
+  const refineStanza = useAppStore((state) => state.refineStanza);
+
   return (
     <div className="piece-body">
       {stanzas.map((stanza, stanzaIndex) => {
@@ -50,6 +53,27 @@ export function PieceBody({ stanzas }: PieceBodyProps) {
               key={`rule-${stanzaIndex}`}
               className="stanza-rule"
               aria-hidden="true"
+            />
+          );
+        }
+
+        if (editMode) {
+          return (
+            <EditableStanza
+              key={`stanza-edit-${stanzaIndex}`}
+              stanza={stanza}
+              stanzaIndex={stanzaIndex}
+              totalStanzas={stanzas.length}
+              editMode={editMode}
+              isRefining={refiningStanzaIndex === stanzaIndex}
+              onEditLine={(segmentIndex, newText) => editStanzaLine(stanzaIndex, segmentIndex, newText)}
+              onRemoveStanza={() => removeStanza(stanzaIndex)}
+              onMoveUp={() => reorderStanza(stanzaIndex, stanzaIndex - 1)}
+              onMoveDown={() => reorderStanza(stanzaIndex, stanzaIndex + 1)}
+              onRefineStanza={(instruction) => {
+                void refineStanza(stanzaIndex, instruction);
+                return Promise.resolve();
+              }}
             />
           );
         }

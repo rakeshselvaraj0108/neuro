@@ -63,3 +63,15 @@ export interface ShipResult {
   title: string;
   stanzas: Array<Array<{ text: string; origin: z.infer<typeof SegmentOriginSchema>; sourceFragmentId?: string }>>;
 }
+
+export const RefineResultSchema = z.object({
+  segments: z.array(
+    z.object({
+      text: z.string(),
+      origin: SegmentOriginSchema,
+      sourceFragmentId: z.string().optional(),
+    }),
+  ),
+});
+export type RefineResult = z.infer<typeof RefineResultSchema>;
+

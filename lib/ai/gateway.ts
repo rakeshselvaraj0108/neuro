@@ -19,7 +19,7 @@ import { logAgentCall, type AgentSource } from "./telemetry";
  * validation fails at any point.
  */
 
-export type AgentTask = "constellation" | "fidelity" | "momentum" | "ship" | "health";
+export type AgentTask = "constellation" | "fidelity" | "momentum" | "ship" | "health" | "refine";
 
 export interface AgentResult<T> {
   data: T;

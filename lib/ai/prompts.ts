@@ -1,4 +1,4 @@
-import type { Cluster, Fragment } from "@/types/domain";
+import type { Cluster, Fragment, PieceSegment } from "@/types/domain";
 
 /**
  * Prompt builders for every agent task. Nothing here is wired into a route
@@ -109,6 +109,34 @@ Output must match this exact shape, with no extra keys and no commentary:
 ("sourceFragmentId" is only present on "captured" segments.)`;
 
   const user = `Chosen form: ${form}\nCluster "${cluster.label}", built from these fragments:\n\n${fragmentList(fragments)}\n\nAssemble the finished piece.`;
+
+  return { system, user };
+}
+
+// ---------------------------------------------------------------------------
+// Refine
+// ---------------------------------------------------------------------------
+
+export function buildRefinePrompt(
+  stanzaSegments: PieceSegment[],
+  instruction: string,
+  clusterLabel?: string,
+): PromptPair {
+  const currentStanzaText = stanzaSegments.map((s) => s.text).join("");
+  const system = `You are the Refine agent inside Catch the Flood. The creator wants to refine ONE specific stanza of their finished piece using a plain-language instruction.
+
+Your job:
+- Rewrite ONLY this stanza per the user's instruction. Do not touch or return any other stanza.
+- Preserve as much of the creator's original wording as possible — minimize invention. The product rewards keeping their voice.
+- Return ONLY an array of segments for this single revised stanza.
+- Tag every segment origin as "captured" (if lifted verbatim from the original stanza or fragments) or "invented" (for new words added).
+
+Output must match this exact shape, with no extra keys and no commentary:
+{"segments":[{"text":string,"origin":"captured"|"invented","sourceFragmentId":string}]}`;
+
+  const user = `Original Stanza:\n"""\n${currentStanzaText}\n"""\n\nInstruction: "${instruction}"${
+    clusterLabel ? `\nCluster context: "${clusterLabel}"` : ""
+  }\n\nRewrite this stanza.`;
 
   return { system, user };
 }

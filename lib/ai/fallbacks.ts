@@ -318,3 +318,12 @@ export function fallbackShip(cluster: Cluster, fragments: Fragment[]): ShipResul
     ]),
   };
 }
+
+export function fallbackRefine(
+  stanzaSegments: PieceSegment[],
+): { segments: PieceSegment[]; isOffline: true } {
+  return {
+    segments: stanzaSegments,
+    isOffline: true,
+  };
+}
