@@ -1,12 +1,15 @@
 /**
  * The single source of truth for whether the AI path is usable at all.
  *
- * A missing or empty key must never throw or crash the server — it must
- * simply disable the AI path so every consumer routes straight to the
- * deterministic fallback in lib/ai/fallbacks.ts. This file has no
- * dependencies and does no I/O, so importing it can never fail.
+ * Checks process.env for GEMINI_API_KEY, NVIDIA_API_KEY, OPENAI_API_KEY, or AI_API_KEY.
+ * A missing or empty key never throws or crashes the server — it simply routes
+ * to the deterministic fallback generators in lib/ai/fallbacks.ts.
  */
-const rawKey = process.env.NVIDIA_API_KEY;
+const rawKey =
+  process.env.GEMINI_API_KEY ||
+  process.env.NVIDIA_API_KEY ||
+  process.env.OPENAI_API_KEY ||
+  process.env.AI_API_KEY;
 
 export const NVIDIA_API_KEY: string = typeof rawKey === "string" ? rawKey.trim() : "";
 
