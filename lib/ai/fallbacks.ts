@@ -148,6 +148,43 @@ export function fallbackConstellation(fragments: Fragment[]): ConstellationResul
   };
 }
 
+/**
+ * The very-small-flood edge case: forcing an LLM to invent distinctions
+ * between one or two sentences produces worse results than just saying so.
+ * Used by app/api/ai/constellation/route.ts as a cheap guard *before*
+ * reaching runAgent — reuses the same readiness heuristic as
+ * fallbackConstellation so the number means the same thing everywhere,
+ * just with an honest reason instead of a bucketed one.
+ *
+ * @example
+ *   fallbackSingleCluster([
+ *     { id: "f1", text: "the blue train still comes", createdAt: 1000, mode: "text", abandoned: false, clusterId: null },
+ *   ])
+ *   // => {
+ *   //   clusters: [{
+ *   //     id: "cluster_1", label: "the blue train still comes", fragmentIds: ["f1"],
+ *   //     readiness: 20, readinessReason: "Not much to sort yet — see it as one piece for now.",
+ *   //     suggestedForms: ["A short poem"],
+ *   //   }],
+ *   // }
+ */
+export function fallbackSingleCluster(fragments: Fragment[]): ConstellationResult {
+  if (fragments.length === 0) return { clusters: [] };
+
+  return {
+    clusters: [
+      {
+        id: "cluster_1",
+        label: deriveLabel(fragments[0]?.text ?? ""),
+        fragmentIds: fragments.map((f) => f.id),
+        readiness: computeReadiness(fragments, fragments),
+        readinessReason: "Not much to sort yet — see it as one piece for now.",
+        suggestedForms: suggestedFormsFor(fragments.length),
+      },
+    ],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Fidelity — pure bookkeeping, no heuristic guessing needed.
 // ---------------------------------------------------------------------------
