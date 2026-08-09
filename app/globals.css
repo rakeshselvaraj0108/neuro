@@ -2023,15 +2023,198 @@ button:disabled {
   letter-spacing: 0.01em;
 }
 
+.momentum-screen,
+.ship-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 32px 20px 80px;
+}
+
+.momentum-shell,
+.ship-panel {
+  width: min(820px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px;
+  border: 1px solid var(--hair);
+  border-radius: 16px;
+  background: rgb(var(--ink-panel-rgb) / 92%);
+  box-shadow: var(--elev-panel);
+  backdrop-filter: blur(12px);
+}
+
+.momentum-header,
+.ship-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.momentum-title,
+.ship-panel__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--paper);
+  line-height: 1.1;
+}
+
+.momentum-title {
+  font-size: clamp(28px, 3vw, 44px);
+}
+
+.momentum-summary,
+.ship-panel__subtitle {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--paper-dim);
+}
+
+.momentum-list {
+  display: grid;
+  gap: 16px;
+}
+
+.momentum-option {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 22px;
+  border: 1px solid var(--hair);
+  border-radius: 14px;
+  background: rgb(var(--ink-raise-rgb, 26 15 18) / 72%);
+  color: var(--paper);
+  text-align: left;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.momentum-option:hover {
+  transform: translateY(-2px);
+  border-color: var(--hair-lit);
+  box-shadow: var(--elev-panel);
+}
+
+.momentum-option__index {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--blood-bright);
+  letter-spacing: 0.08em;
+}
+
+.momentum-option__content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.momentum-option__form {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--blood-bright);
+}
+
+.momentum-option__pitch {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--paper);
+}
+
+.momentum-option__arrow {
+  font-size: 22px;
+  color: var(--paper-faint);
+}
+
+.ship-progress {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(var(--blood-deep-rgb) / 22%);
+}
+
+.ship-progress__bar {
+  display: block;
+  width: 62%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    var(--blood-bright),
+    var(--blood-core)
+  );
+  box-shadow: 0 0 18px rgb(var(--blood-bright-rgb) / 34%);
+  animation: ship-surge 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes ship-surge {
+  from {
+    transform: translateX(-6%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(18%);
+    opacity: 1;
+  }
+}
+
+.ship-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--paper-faint);
+}
+
 [data-theme="safe"] .loading-screen__bloom {
   animation: none;
   opacity: 0.55;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .loading-screen__bloom {
+  .loading-screen__bloom,
+  .ship-progress__bar {
     animation: none;
     opacity: 0.55;
+  }
+}
+
+@media (max-width: 639px) {
+  .momentum-shell,
+  .ship-panel {
+    padding: 20px 18px;
+    border-radius: 12px;
+  }
+
+  .momentum-option {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px 16px;
+  }
+
+  .momentum-option__arrow {
+    display: none;
+  }
+
+  .ship-meta {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 
@@ -2063,5 +2246,382 @@ button:disabled {
     bottom: 16px;
     transform: none;
     max-width: none;
+  }
+}
+
+/* ============================================================================
+   PHASE 4 — CONSTELLATION MAP
+   The single most important visual in the product: a genuine star map, pure
+   SVG with deterministic trig layout (lib/constellation/layout.ts) — no
+   physics library, no canvas library. Same tokens, same motion law.
+   ========================================================================= */
+
+.constellation-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 20px 20px;
+  gap: 12px;
+}
+
+.constellation-back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--paper-faint);
+  transition: color 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.constellation-back:hover {
+  color: var(--blood-bright);
+}
+
+.constellation-map-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.constellation-hint {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: var(--paper-faint);
+}
+
+.constellation-map-stage {
+  position: relative;
+  flex: 1;
+  min-height: 420px;
+  border: 1px solid var(--hair);
+  border-radius: 12px;
+  background: var(--ink-void);
+  box-shadow: var(--elev);
+  overflow: hidden;
+}
+
+.constellation-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* --- star field -------------------------------------------------------------- */
+
+.constellation-star {
+  fill: var(--paper-faint);
+  opacity: 0.11;
+}
+
+.constellation-star[data-pulsing="true"] {
+  fill: var(--blood-deep);
+  animation: constellation-star-pulse 8s ease-in-out infinite;
+}
+
+@keyframes constellation-star-pulse {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* --- shared orb gradient stops ------------------------------------------------ */
+
+.orb-stop--bright {
+  stop-color: var(--blood-bright);
+}
+.orb-stop--deep {
+  stop-color: var(--blood-deep);
+}
+.orb-stop--deep-transparent {
+  stop-color: var(--blood-deep);
+  stop-opacity: 0;
+}
+.orb-stop--glow {
+  stop-color: var(--blood-glow);
+  stop-opacity: 0.4;
+}
+.orb-stop--glow-transparent {
+  stop-color: var(--blood-glow);
+  stop-opacity: 0;
+}
+
+/* --- cluster orb --------------------------------------------------------------- */
+
+.cluster-orb {
+  cursor: pointer;
+  /* Deliberately no outline override — the global :focus-visible rule
+     (2px --ember ring) must reach this element. Phase 3 made exactly this
+     mistake on the capture textarea; not repeating it here. */
+}
+
+.cluster-orb__glow {
+  fill: var(--orb-glow-url);
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Readiness-proportional breathing — see lib/constellation/layout.ts's
+   breatheDurationFor() comment: this is functional information design (the
+   fastest-breathing orb IS the most-ready one), not decoration. Safe Mode
+   and prefers-reduced-motion both already prevent data-breathing from ever
+   being "true" at the JS level; the rules below are defense in depth. */
+.cluster-orb__glow[data-breathing="true"] {
+  animation-name: cluster-orb-breathe;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+@keyframes cluster-orb-breathe {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 0.88;
+  }
+}
+
+.cluster-orb__fill {
+  fill: var(--orb-fill-url);
+  filter: drop-shadow(0 0 12px rgb(var(--blood-core-rgb) / 45%));
+  transition: filter 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cluster-orb__fill[data-active="true"] {
+  filter: drop-shadow(0 0 22px rgb(var(--blood-bright-rgb) / 60%)) brightness(1.12);
+}
+
+.cluster-orb__parked-overlay {
+  fill: var(--paper-faint);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cluster-orb__parked-overlay[data-parked="true"] {
+  opacity: 0.82;
+}
+
+.cluster-orb__mode-glyph {
+  color: var(--paper-faint);
+}
+
+.cluster-orb__label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  fill: var(--paper);
+  pointer-events: none;
+}
+
+.cluster-orb__readiness {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--paper-dim);
+  pointer-events: none;
+}
+
+.cluster-orb__readiness--high {
+  fill: var(--blood-bright);
+}
+
+[data-theme="safe"] .cluster-orb__glow[data-breathing="true"],
+[data-theme="safe"] .constellation-star[data-pulsing="true"] {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cluster-orb__glow[data-breathing="true"],
+  .constellation-star[data-pulsing="true"] {
+    animation: none;
+  }
+}
+
+/* --- detail panel ---------------------------------------------------------------- */
+
+.constellation-detail {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  bottom: 20px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair) transparent;
+}
+
+.constellation-detail__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--blood-core);
+}
+
+.constellation-detail__bar-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ink-raise);
+  overflow: hidden;
+  flex: none;
+}
+
+.constellation-detail__bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--blood-bright);
+}
+
+.constellation-detail__reason {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--paper-dim);
+}
+
+.constellation-detail__fragments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.constellation-detail__fragment-row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--paper);
+}
+
+.constellation-detail__fragment-glyph {
+  margin-top: 3px;
+  color: var(--paper-faint);
+  flex: none;
+}
+
+.constellation-detail__fragment-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.constellation-detail__more {
+  padding-left: 22px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--paper-faint);
+}
+
+.constellation-detail__forms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.constellation-detail__form-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--ink-raise);
+  color: var(--paper-dim);
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.constellation-detail__commit {
+  margin-top: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--blood-bright);
+  color: var(--ink-void);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.constellation-detail__commit:hover {
+  transform: translateY(-1px);
+}
+
+/* --- parked caption -------------------------------------------------------------- */
+
+.constellation-parked-caption {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--paper-dim);
+}
+
+/* --- Phase 4 responsive ----------------------------------------------------------- */
+
+@media (max-width: 899px) {
+  .constellation-map-stage {
+    min-height: 340px;
+  }
+
+  .constellation-detail {
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-height: 55%;
+  }
+}
+
+@media (max-width: 479px) {
+  .constellation-detail {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .constellation-detail__title {
+    font-size: 16px;
   }
 }
