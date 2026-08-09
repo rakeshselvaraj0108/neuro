@@ -1,12 +1,14 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { motion } from "framer-motion";
 
 import type { Piece } from "@/types/domain";
 import { usePointerParallax } from "@/hooks/usePointerParallax";
+import { useEffectiveTheme } from "@/hooks/useEffectiveTheme";
 
 import { Flourish } from "./Flourish";
-import { MoonBackdrop } from "./MoonBackdrop";
+import { BackdropRenderer } from "./BackdropRenderer";
 import { MoonDivider } from "./MoonDivider";
 import { PieceBody } from "./PieceBody";
 import { PieceTitle } from "./PieceTitle";
@@ -18,39 +20,55 @@ interface PieceCanvasProps {
   titleId: string;
 }
 
-/**
- * The museum wall label. A double-framed, ornamented canvas holding the
- * poem over an atmospheric backdrop, with gentle pointer-follow parallax.
- *
- * The frame (this component's motion wrapper) and the text layer
- * (`.canvas__content`, translated on its own Z plane in CSS) tilt together
- * but not identically, which is what reads as a physical object rather than
- * a tilting picture.
- */
 export function PieceCanvas({ piece, parallaxEnabled, titleId }: PieceCanvasProps) {
   const { ref, rotateX, rotateY } = usePointerParallax(parallaxEnabled);
+  const { effectiveTheme } = useEffectiveTheme();
+
+  const totalLines = piece.stanzas.reduce(
+    (acc, stanza) => acc + stanza.reduce((lAcc, seg) => lAcc + seg.text.split("\n").length, 0),
+    0,
+  );
+
+  const isShortPiece = totalLines <= 4;
+  const isLongPiece = totalLines >= 25;
+
+  const themeStyle: CSSProperties = {
+    "--theme-ground": effectiveTheme.ground,
+    "--theme-canvas": effectiveTheme.canvas,
+    "--theme-panel": effectiveTheme.panel,
+    "--theme-accent": effectiveTheme.accent,
+    "--theme-accent-bright": effectiveTheme.accentBright,
+    "--theme-verbatim-glow": effectiveTheme.verbatimGlow,
+    "--theme-text-primary": effectiveTheme.textPrimary,
+    "--theme-text-dim": effectiveTheme.textDim,
+    "--theme-text-faint": effectiveTheme.textFaint,
+    rotateX,
+    rotateY,
+  } as CSSProperties;
 
   return (
-    <div className="canvas-mount">
+    <div className="canvas-mount" style={{ color: effectiveTheme.textPrimary }}>
       <motion.div
         ref={ref}
-        className="canvas"
-        style={{ rotateX, rotateY }}
+        className={`canvas ${isShortPiece ? "canvas--short" : ""} ${
+          isLongPiece ? "canvas--scrollable" : ""
+        }`}
+        style={themeStyle}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <MoonBackdrop />
+        <BackdropRenderer kind={effectiveTheme.backdropKind} />
 
         <Flourish corner="tl" />
         <Flourish corner="tr" />
         <Flourish corner="bl" />
         <Flourish corner="br" />
 
-        <div className="canvas__content">
+        <div className="canvas__content" tabIndex={isLongPiece ? 0 : undefined} aria-label={isLongPiece ? "Poem text scrollable area" : undefined}>
           <article className="piece" aria-labelledby={titleId}>
             <PieceTitle title={piece.title} id={titleId} />
-            <MoonDivider />
+            <MoonDivider kind={effectiveTheme.backdropKind} />
             <PieceBody stanzas={piece.stanzas} />
           </article>
         </div>

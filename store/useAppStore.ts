@@ -9,6 +9,8 @@ import { fallbackConstellation, fallbackMomentum, fallbackShip } from "@/lib/ai/
 import type { AgentSource } from "@/lib/ai/telemetry";
 import { reverifyEditedPiece } from "@/lib/fidelity/reverify";
 import { verifyPiece, type VerifiedPiece, type VerifiedSegment, type VerifiedShipResult } from "@/lib/fidelity/verify";
+import { suggestTheme } from "@/lib/presentation/suggestTheme";
+import type { ThemeKey } from "@/lib/presentation/themes";
 import type { CaptureMode, Cluster, Fragment, JourneyStep, Piece } from "@/types/domain";
 
 export type AppView = "flood" | "constellation" | "momentum" | "ship" | "finished";
@@ -88,6 +90,12 @@ interface AppState {
   editMode: boolean;
   undoSnapshot: VerifiedPiece | null;
   refiningStanzaIndex: number | null;
+
+  // --- presentation theme (Phase 8) ---------------------------------------
+  presentationTheme: ThemeKey | null;
+  suggestedTheme: ThemeKey;
+  suggestionReason: string;
+  setPresentationTheme: (theme: ThemeKey) => void;
 
   setSelectedCluster: (cluster: Cluster | null) => void;
   setMomentumOptions: (options: MomentumOption[]) => void;
@@ -448,15 +456,29 @@ export const useAppStore = create<AppState>()(
           journey,
         };
 
+        const pieceText = pieceData.stanzas
+          .map((s) => s.map((seg) => seg.text).join(""))
+          .join("\n");
+        const suggestion = suggestTheme(pieceText, form);
+
         set({
           currentPiece: fullPiece,
           generatedPiece: fullPiece as unknown as Piece,
           chosenForm: form,
           pieceStatus: "ready",
           pieceSource: source,
+          suggestedTheme: suggestion.themeKey,
+          suggestionReason: suggestion.reason,
+          presentationTheme: null,
           view: "finished",
         });
       },
+
+      // --- presentation theme (Phase 8) ---------------------------------------
+      presentationTheme: null,
+      suggestedTheme: "bloodmoon",
+      suggestionReason: "Default presentation theme",
+      setPresentationTheme: (presentationTheme: ThemeKey) => set({ presentationTheme }),
 
       // --- piece edit & refine (Phase 7) ---------------------------------------
       editMode: false,

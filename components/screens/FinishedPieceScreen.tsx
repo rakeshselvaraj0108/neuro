@@ -4,14 +4,14 @@ import { useId, useEffect, useRef, useState } from "react";
 
 import { FidelityMeter } from "@/components/piece/FidelityMeter";
 import { PieceCanvas } from "@/components/piece/PieceCanvas";
-import { EditModeToggle } from "@/components/piece/EditModeToggle";
+import { FinishedControls } from "@/components/piece/FinishedControls";
 import { ExportPanel } from "@/components/rail/ExportPanel";
 import { JourneyPanel } from "@/components/rail/JourneyPanel";
 import { QuotePanel } from "@/components/rail/QuotePanel";
 import { Footer } from "@/components/shell/Footer";
 import { Header } from "@/components/shell/Header";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { useSafeMode } from "@/hooks/useSafeMode";
+import { useEffectiveTheme } from "@/hooks/useEffectiveTheme";
 import { samplePiece } from "@/lib/samplePiece";
 import { useAppStore } from "@/store/useAppStore";
 import type { Piece } from "@/types/domain";
@@ -21,9 +21,10 @@ export interface FinishedPieceScreenProps {
 }
 
 export function FinishedPieceScreen({ piece: propPiece }: FinishedPieceScreenProps) {
-  const { isSafe } = useSafeMode();
   const reducedMotion = useReducedMotion();
   const titleId = useId();
+
+  const { effectiveTheme, isSafeMode } = useEffectiveTheme();
 
   const currentPiece = useAppStore((state) => state.currentPiece);
   const undoLastPieceChange = useAppStore((state) => state.undoLastPieceChange);
@@ -32,7 +33,7 @@ export function FinishedPieceScreen({ piece: propPiece }: FinishedPieceScreenPro
   const activePiece: Piece = (currentPiece as unknown as Piece) ?? propPiece ?? samplePiece;
   const isFallbackExample = !currentPiece;
 
-  const parallaxEnabled = !isSafe && !reducedMotion;
+  const parallaxEnabled = !isSafeMode && !reducedMotion;
 
   const [fidelityPulsing, setFidelityPulsing] = useState(false);
   const prevCapturedRef = useRef(activePiece.fidelity.captured);
@@ -40,14 +41,14 @@ export function FinishedPieceScreen({ piece: propPiece }: FinishedPieceScreenPro
   // Pulse fidelity meter when captured word count increases
   useEffect(() => {
     if (activePiece.fidelity.captured > prevCapturedRef.current) {
-      if (!isSafe && !reducedMotion) {
+      if (!isSafeMode && !reducedMotion) {
         setFidelityPulsing(true);
         const t = setTimeout(() => setFidelityPulsing(false), 1200);
         return () => clearTimeout(t);
       }
     }
     prevCapturedRef.current = activePiece.fidelity.captured;
-  }, [activePiece.fidelity.captured, isSafe, reducedMotion]);
+  }, [activePiece.fidelity.captured, isSafeMode, reducedMotion]);
 
   // Ctrl/Cmd+Z keyboard listener for single-level undo
   useEffect(() => {
@@ -66,7 +67,14 @@ export function FinishedPieceScreen({ piece: propPiece }: FinishedPieceScreenPro
   const totalSegments = activePiece.fidelity.captured + activePiece.fidelity.invented;
 
   return (
-    <div className="app">
+    <div
+      className="app"
+      style={{
+        backgroundColor: effectiveTheme.ground,
+        color: effectiveTheme.textPrimary,
+        transition: reducedMotion ? "none" : "background-color 0.4s ease, color 0.4s ease",
+      }}
+    >
       <Header />
 
       <main className="stage">
@@ -74,6 +82,12 @@ export function FinishedPieceScreen({ piece: propPiece }: FinishedPieceScreenPro
           {isFallbackExample ? (
             <div className="example-note" role="note">
               <span>Showing an example — finish your own piece to replace this.</span>
+            </div>
+          ) : null}
+
+          {isSafeMode ? (
+            <div className="safe-mode-presentation-note" role="status">
+              <span>Safe Mode is keeping this calm — your theme returns when you exit Safe Mode.</span>
             </div>
           ) : null}
 
@@ -92,11 +106,12 @@ export function FinishedPieceScreen({ piece: propPiece }: FinishedPieceScreenPro
                 invented={activePiece.fidelity.invented}
               />
             </div>
-            {!isFallbackExample ? <EditModeToggle /> : null}
+
+            {!isFallbackExample ? <FinishedControls /> : null}
           </div>
 
           <div className="sr-only" role="status" aria-live="polite">
-            {`Fidelity updated: ${activePiece.fidelity.captured} of ${totalSegments} segments are yours.`}
+            {`Presentation theme: ${effectiveTheme.name}. Fidelity: ${activePiece.fidelity.captured} of ${totalSegments} segments are yours.`}
           </div>
 
           <PieceCanvas
