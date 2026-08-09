@@ -25,6 +25,8 @@ export interface AgentResult<T> {
   data: T;
   source: AgentSource;
   latencyMs: number;
+  /** Safe provider diagnostic for local health checks; never contains creator content. */
+  providerError: string | null;
 }
 
 interface RunAgentInput<T> {
@@ -39,9 +41,15 @@ interface RunAgentInput<T> {
 }
 
 const BASE_URL = "https://integrate.api.nvidia.com/v1";
-const PRIMARY_MODEL = "meta/llama-3.3-70b-instruct";
-const FALLBACK_MODEL = "nvidia/llama-3.1-nemotron-70b-instruct";
-const TIMEOUT_MS = 9_000;
+// The 8B instruction model has materially better interactive latency on the
+// hosted NVIDIA endpoint. The larger 70B model remains available as a retry
+// path when the primary provider request fails.
+const PRIMARY_MODEL = "meta/llama-3.1-8b-instruct";
+const FALLBACK_MODEL = "meta/llama-3.3-70b-instruct";
+// NVIDIA's hosted models can take longer than a typical UI request on a cold
+// start. Nine seconds made a valid configured key look broken and forced the
+// product down the deterministic path before the provider could answer.
+const TIMEOUT_MS = 35_000;
 const DEFAULT_MAX_TOKENS = 900;
 const DEFAULT_TEMPERATURE = 0.4;
 const TEMPERATURE_DROP_ON_RETRY = 0.15;
@@ -55,6 +63,17 @@ const SCHEMA_CORRECTION_MESSAGE =
 const CODE_FENCE_RE = /^```(?:json)?\s*|\s*```$/g;
 
 let cachedClient: OpenAI | null = null;
+let lastProviderError: string | null = null;
+
+function safeErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message.slice(0, 180);
+  return "Unknown provider error";
+}
+
+/** Diagnostic metadata only: never includes prompt, response, or creator text. */
+export function getLastProviderError(): string | null {
+  return lastProviderError;
+}
 
 /** Constructed lazily — only ever reached once AI_ENABLED has been confirmed true. */
 function getClient(): OpenAI {
@@ -115,6 +134,7 @@ async function callModel(params: {
         messages,
         max_tokens: params.maxTokens,
         temperature: params.temperature,
+        stream: false,
         response_format: { type: "json_object" },
       },
       { signal: controller.signal },
@@ -135,7 +155,7 @@ function finish<T>(
 ): AgentResult<T> {
   const latencyMs = Date.now() - start;
   logAgentCall({ task, source, latencyMs, success });
-  return { data, source, latencyMs };
+  return { data, source, latencyMs, providerError: source === "fallback" ? lastProviderError : null };
 }
 
 export async function runAgent<T>(input: RunAgentInput<T>): Promise<AgentResult<T>> {
@@ -155,6 +175,7 @@ export async function runAgent<T>(input: RunAgentInput<T>): Promise<AgentResult<
     const cacheKey = `${task}:${sha1(userPrompt)}`;
     const cached = cache.get(cacheKey);
     if (cached !== undefined) {
+      lastProviderError = null;
       return finish(task, start, cached as T, "cache", true);
     }
 
@@ -170,17 +191,20 @@ export async function runAgent<T>(input: RunAgentInput<T>): Promise<AgentResult<
       let content: string | null = null;
       let modelThatResponded = PRIMARY_MODEL;
 
+      lastProviderError = null;
       try {
         content = await callModel({ model: PRIMARY_MODEL, systemPrompt, userPrompt, maxTokens, temperature });
-      } catch {
+      } catch (error) {
+        lastProviderError = safeErrorMessage(error);
         // Network error, non-2xx, or the 9s timeout firing on the primary model.
         circuitBreaker.recordFailure();
         try {
           modelThatResponded = FALLBACK_MODEL;
           content = await callModel({ model: FALLBACK_MODEL, systemPrompt, userPrompt, maxTokens, temperature });
-        } catch {
+        } catch (fallbackError) {
           // Both models failed at the network level — give up on the network path.
           circuitBreaker.recordFailure();
+          lastProviderError = safeErrorMessage(fallbackError);
           content = null;
         }
       }
@@ -199,7 +223,8 @@ export async function runAgent<T>(input: RunAgentInput<T>): Promise<AgentResult<
               extraUserMessage: SCHEMA_CORRECTION_MESSAGE,
             });
             parsed = tryParseAndValidate(retryContent, schema);
-          } catch {
+          } catch (retryError) {
+            lastProviderError = safeErrorMessage(retryError);
             parsed = { ok: false };
           }
         }

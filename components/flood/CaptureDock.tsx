@@ -8,16 +8,11 @@ import { useAppStore } from "@/store/useAppStore";
 import type { CaptureMode } from "@/types/domain";
 
 import { VoiceToggle } from "./VoiceToggle";
+import { Toast } from "@/components/ui/Toast";
 
 const CHECKPOINT_INTERVAL_MS = 4000;
 const DESKTOP_BREAKPOINT_PX = 768;
 
-/**
- * The single most important element on screen: a zero-ceremony capture
- * surface. Voice and text share one draft buffer so switching mid-thought
- * never loses anything; a 4-second checkpoint interval guarantees a crash or
- * closed tab never loses more than a few seconds of unsent thought.
- */
 export function CaptureDock() {
   const draftText = useAppStore((state) => state.draftText);
   const setDraftText = useAppStore((state) => state.setDraftText);
@@ -28,12 +23,11 @@ export function CaptureDock() {
   const voice = useVoiceCapture();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  // The fragment currently being safety-net-checkpointed for this draft, if
-  // any — reused (updated, not duplicated) by the checkpoint tick and by the
-  // final commit, so one continuous thought never becomes several cards.
   const checkpointIdRef = useRef<string | null>(null);
   const draftModeRef = useRef<CaptureMode>("text");
   const [counterPulse, setCounterPulse] = useState(false);
+  const [parkedToastOpen, setParkedToastOpen] = useState(false);
+  const [parkedToastKey, setParkedToastKey] = useState<number>(0);
   const previousCountRef = useRef(fragmentCount);
 
   // Desktop only — auto-focusing on mobile pops the OS keyboard and covers
@@ -85,10 +79,15 @@ export function CaptureDock() {
       resetDraftBookkeeping();
       return;
     }
+    const isLocked = useAppStore.getState().scopeLocked;
     if (checkpointIdRef.current) {
       updateFragmentText(checkpointIdRef.current, text);
     } else {
       addFragment(text, draftModeRef.current);
+    }
+    if (isLocked) {
+      setParkedToastOpen(true);
+      setParkedToastKey(Date.now());
     }
     resetDraftBookkeeping();
     setDraftText("");
@@ -187,6 +186,13 @@ export function CaptureDock() {
           Voice capture works best in Chrome or Edge — text works everywhere.
         </p>
       ) : null}
+
+      <Toast
+        open={parkedToastOpen}
+        message="Caught and saved for later — not added to the piece you're finishing."
+        onDismiss={() => setParkedToastOpen(false)}
+        resetKey={parkedToastKey}
+      />
     </div>
   );
 }

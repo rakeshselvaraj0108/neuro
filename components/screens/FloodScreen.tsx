@@ -12,14 +12,11 @@ import { Portal } from "@/components/ui/Portal";
 import { Toast } from "@/components/ui/Toast";
 import { useAppStore } from "@/store/useAppStore";
 
+import { LockedFloodBanner } from "@/components/flood/LockedFloodBanner";
+
 const EASE = [0.22, 1, 0.36, 1] as const;
 const ENCOURAGEMENT_THRESHOLD = 3;
 
-/**
- * The app's entry point — a neurodivergent creator mid-hyperfocus needs to
- * dump a thought in under two seconds, zero ceremony. Everything here exists
- * to remove friction between having a thought and it being safely caught.
- */
 export function FloodScreen() {
   const fragments = useAppStore((state) => state.fragments);
   const fragmentsHydrated = useAppStore((state) => state.fragmentsHydrated);
@@ -30,8 +27,6 @@ export function FloodScreen() {
   const setView = useAppStore((state) => state.setView);
 
   const [toastOpen, setToastOpen] = useState(false);
-  // "Even a few scattered thoughts..." shows above the CTA once, the first
-  // time the flood is non-empty but still thin — encouragement, not a gate.
   const encouragementShownRef = useRef(false);
   const [showEncouragement, setShowEncouragement] = useState(false);
 
@@ -75,6 +70,7 @@ export function FloodScreen() {
 
       <main className="flood-stage">
         <div className="flood-column">
+          <LockedFloodBanner />
           <CaptureDock />
           <FloodCanvas fragments={fragments} onRemove={handleRemove} hydrated={fragmentsHydrated} />
         </div>

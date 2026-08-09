@@ -47,16 +47,19 @@ export const MomentumResultSchema = z.object({
 });
 export type MomentumResult = z.infer<typeof MomentumResultSchema>;
 
-export const ShipResultSchema = z.object({
-  title: z.string(),
-  stanzas: z.array(
-    z.array(
-      z.object({
-        text: z.string(),
-        origin: SegmentOriginSchema,
-        sourceFragmentId: z.string().optional(),
-      }),
-    ),
-  ),
-});
-export type ShipResult = z.infer<typeof ShipResultSchema>;
+/**
+ * NVIDIA models are JSON-mode compatible but don't all use the same field
+ * names for a creative work. The route is the one canonical normalizer, so
+ * accept a non-empty JSON object here rather than throwing away good prose
+ * merely because it arrived as `poem`, `output`, or `lines`.
+ */
+export const ShipResultSchema = z.record(z.unknown()).refine(
+  (value) => Object.keys(value).length > 0,
+  "A finished piece is required",
+);
+export type ShipRawResult = z.infer<typeof ShipResultSchema>;
+
+export interface ShipResult {
+  title: string;
+  stanzas: Array<Array<{ text: string; origin: z.infer<typeof SegmentOriginSchema>; sourceFragmentId?: string }>>;
+}

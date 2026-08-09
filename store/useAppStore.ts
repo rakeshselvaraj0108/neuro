@@ -5,32 +5,26 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import { uuid } from "@/lib/uuid";
 import { type StoredPrefs, type ThemeName } from "@/lib/prefs";
-import { fallbackConstellation } from "@/lib/ai/fallbacks";
+import { fallbackConstellation, fallbackMomentum, fallbackShip } from "@/lib/ai/fallbacks";
 import type { AgentSource } from "@/lib/ai/telemetry";
-import type { CaptureMode, Cluster, Fragment, Piece } from "@/types/domain";
+import { verifyPiece, type VerifiedPiece, type VerifiedShipResult } from "@/lib/fidelity/verify";
+import type { CaptureMode, Cluster, Fragment, JourneyStep, Piece } from "@/types/domain";
 
-/** localStorage is the only persistence layer in this app. No accounts, ever. */
-
-/**
- * The whole product is one page driven by this state machine — no route
- * changes, so transitions stay fluid and the demo can never 404.
- */
 export type AppView = "flood" | "constellation" | "momentum" | "ship" | "finished";
-
 export type ConstellationStatus = "idle" | "loading" | "ready";
+export type MomentumStatus = "idle" | "loading" | "ready";
+export type PieceStatus = "idle" | "generating" | "ready";
+
+export interface MomentumOption {
+  form: string;
+  pitch: string;
+}
 
 interface LastRemoved {
   fragment: Fragment;
-  /** Original position in `fragments`, so undo restores it exactly, not just at the top. */
   index: number;
 }
 
-/**
- * A simple, stable fingerprint of a fragment set (ids + text, order-
- * sensitive) — not cryptographic, just enough to know "has anything the
- * constellation pass cares about changed since last time", so revisiting
- * the screen without adding fragments never re-spends a credit.
- */
 function hashFragments(fragments: Fragment[]): string {
   let hash = 0;
   const input = fragments.map((f) => `${f.id}:${f.text}`).join("|");
@@ -41,12 +35,10 @@ function hashFragments(fragments: Fragment[]): string {
 }
 
 interface AppState {
-  // --- theme (Phase 1, unchanged) ------------------------------------------
+  // --- theme -----------------------------------------------------------------
   theme: ThemeName;
   dyslexiaFont: boolean;
-  /** Mirrors `prefers-reduced-motion: reduce`. Never persisted. */
   reducedMotion: boolean;
-  /** False until preferences have been read back from localStorage. */
   hydrated: boolean;
   setTheme: (theme: ThemeName) => void;
   toggleTheme: () => void;
@@ -54,43 +46,52 @@ interface AppState {
   setReducedMotion: (on: boolean) => void;
   hydrate: (prefs: StoredPrefs) => void;
 
-  // --- view state machine (Phase 3) ----------------------------------------
+  // --- view state machine ----------------------------------------------------
   view: AppView;
   setView: (view: AppView) => void;
 
-  // --- constellation / clustering (Phase 4) ---------------------------------
+  // --- constellation / clustering --------------------------------------------
   clusters: Cluster[];
   constellationStatus: ConstellationStatus;
   constellationSource: AgentSource | null;
   selectedClusterId: string | null;
-  /** A stable fingerprint of the fragment set the current `clusters` were computed from — the no-op / re-run guard. */
   constellationFragmentsHash: string | null;
   runConstellation: () => Promise<void>;
   selectCluster: (id: string) => void;
-  /** Clears clusters back to idle. Wired up in Phase 5+ for "add more to the flood"; stubbed now, no call site yet. */
   resetConstellation: () => void;
 
-  // --- AI flow state (momentum / ship / finished) ---------------------------
-  /**
-   * The full Cluster object for whichever id is selected — kept alongside
-   * `selectedClusterId` (rather than derived on every read) so Momentum and
-   * Ship can keep consuming a plain `Cluster | null` prop. `selectCluster`
-   * keeps both in sync; this one is the one to read from.
-   */
+  // --- momentum & form options ----------------------------------------------
   selectedCluster: Cluster | null;
-  momentumOptions: Array<{ form: string; pitch: string }>;
+  momentumOptions: MomentumOption[];
+  momentumStatus: MomentumStatus;
+  momentumSource: AgentSource | null;
+  momentumClusterIdHash: string | null;
   chosenForm: string | null;
+  runMomentum: () => Promise<void>;
+  chooseForm: (form: string) => void;
+
+  // --- scope-lock executive function ----------------------------------------
+  scopeLocked: boolean;
+  lockedClusterId: string | null;
+  parkedSinceLockCount: number;
+  engageScopeLock: (clusterId: string) => void;
+  releaseScopeLock: () => void;
+
+  // --- piece generation & finished -------------------------------------------
   generatedPiece: Piece | null;
+  currentPiece: VerifiedPiece | null;
+  pieceStatus: PieceStatus;
+  pieceSource: AgentSource | null;
+
   setSelectedCluster: (cluster: Cluster | null) => void;
-  setMomentumOptions: (options: Array<{ form: string; pitch: string }>) => void;
+  setMomentumOptions: (options: MomentumOption[]) => void;
   setChosenForm: (form: string | null) => void;
   setGeneratedPiece: (piece: Piece | null) => void;
+  generatePiece: (form: string) => Promise<void>;
 
-  // --- flood / fragments (Phase 3) -----------------------------------------
+  // --- flood / fragments ----------------------------------------------------
   fragments: Fragment[];
-  /** Live, unsaved text-mode (and in-progress voice) input. Never persisted. */
   draftText: string;
-  /** True once the persisted `fragments` slice has been read back from localStorage. */
   fragmentsHydrated: boolean;
   lastRemoved: LastRemoved | null;
   addFragment: (text: string, mode: CaptureMode) => Fragment | null;
@@ -103,19 +104,10 @@ interface AppState {
   setFragmentsHydrated: (on: boolean) => void;
 }
 
-/**
- * Server render and first client render must agree, so the store always starts
- * on the blood theme. The real preference is applied to <html> by a blocking
- * script before first paint, then folded into the store by useSafeMode.
- *
- * Fragments are the one slice wrapped in zustand's `persist` middleware —
- * everything else (theme, view, draftText) stays plain in-memory state, with
- * theme using its own pre-paint bootstrap script instead (see below).
- */
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // --- theme ---------------------------------------------------------
+      // --- theme -------------------------------------------------------------
       theme: "blood",
       dyslexiaFont: false,
       reducedMotion: false,
@@ -132,7 +124,7 @@ export const useAppStore = create<AppState>()(
           hydrated: true,
         }),
 
-      // --- view ------------------------------------------------------------
+      // --- view --------------------------------------------------------------
       view: "flood",
       setView: (view) => set({ view }),
 
@@ -149,8 +141,6 @@ export const useAppStore = create<AppState>()(
 
         const hash = hashFragments(state.fragments);
         if (state.constellationStatus === "ready" && state.constellationFragmentsHash === hash) {
-          // Same flood the last run already covered — don't re-spend a credit
-          // for a screen the user is just re-visiting.
           return;
         }
 
@@ -177,17 +167,10 @@ export const useAppStore = create<AppState>()(
           clusters = payload.data.clusters;
           source = payload.source ?? "fallback";
         } catch {
-          // The route itself is designed to never fail (the gateway
-          // guarantees a valid result) — reaching here means the network
-          // request never completed at all (e.g. genuinely offline).
-          // Compute the same deterministic fallback locally so the screen
-          // never hangs.
           clusters = fallbackConstellation(currentFragments).clusters;
           source = "fallback";
         }
 
-        // Write clusterId back onto every fragment so it's always
-        // traceable to its cluster from here on.
         const clusterIdByFragmentId = new Map<string, string>();
         clusters.forEach((cluster) => {
           cluster.fragmentIds.forEach((fragmentId) => {
@@ -223,15 +206,245 @@ export const useAppStore = create<AppState>()(
           selectedCluster: null,
         }),
 
-      // --- AI flow ----------------------------------------------------------
+      // --- momentum -----------------------------------------------------------
       selectedCluster: null,
       momentumOptions: [],
+      momentumStatus: "idle",
+      momentumSource: null,
+      momentumClusterIdHash: null,
       chosenForm: null,
+
+      runMomentum: async () => {
+        const state = get();
+        if (state.momentumStatus === "loading") return;
+
+        const clusterId = state.selectedClusterId || state.selectedCluster?.id;
+        if (!clusterId) {
+          if (process.env.NODE_ENV !== "production") {
+            throw new Error("runMomentum requires a selectedClusterId from constellation");
+          }
+          return;
+        }
+
+        // Hash-guard pattern: don't re-spend a credit re-shaping the same cluster
+        if (state.momentumStatus === "ready" && state.momentumClusterIdHash === clusterId) {
+          return;
+        }
+
+        set({ momentumStatus: "loading" });
+
+        const targetCluster = state.selectedCluster || {
+          id: clusterId,
+          label: "Your Idea",
+          fragmentIds: state.fragments.map((f) => f.id),
+          readiness: 100,
+          readinessReason: "",
+          suggestedForms: ["Poem", "Essay", "Script"],
+        };
+
+        const clusterFrags = state.fragments.filter(
+          (f) => f.clusterId === clusterId || targetCluster.fragmentIds.includes(f.id),
+        );
+        const fragsToPass = clusterFrags.length > 0 ? clusterFrags : state.fragments;
+
+        try {
+          const response = await fetch("/api/ai/momentum", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              clusterId,
+              cluster: targetCluster,
+              fragments: fragsToPass,
+              clusterLabel: targetCluster.label,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Momentum request failed with status ${response.status}`);
+          }
+
+          const payload = (await response.json()) as {
+            options: MomentumOption[];
+            source: AgentSource;
+          };
+
+          set({
+            momentumOptions: payload.options,
+            momentumSource: payload.source ?? "model",
+            momentumStatus: "ready",
+            momentumClusterIdHash: clusterId,
+          });
+        } catch {
+          const fallback = fallbackMomentum(targetCluster);
+          set({
+            momentumOptions: fallback.options,
+            momentumSource: "fallback",
+            momentumStatus: "ready",
+            momentumClusterIdHash: clusterId,
+          });
+        }
+      },
+
+      chooseForm: (form: string) => {
+        const state = get();
+        const clusterId = state.selectedClusterId || state.selectedCluster?.id || "cluster_1";
+
+        set({ chosenForm: form });
+
+        // Sequence matters: engage scope lock BEFORE generation starts
+        state.engageScopeLock(clusterId);
+
+        // Kick off piece generation
+        void state.generatePiece(form);
+      },
+
+      // --- scope-lock --------------------------------------------------------
+      scopeLocked: false,
+      lockedClusterId: null,
+      parkedSinceLockCount: 0,
+
+      engageScopeLock: (clusterId: string) => {
+        set({
+          scopeLocked: true,
+          lockedClusterId: clusterId,
+          parkedSinceLockCount: 0,
+        });
+      },
+
+      releaseScopeLock: () => {
+        set((state) => ({
+          scopeLocked: false,
+          lockedClusterId: null,
+          fragments: state.fragments.map((f) =>
+            f.parkedDuringLock ? { ...f, parkedDuringLock: false } : f,
+          ),
+        }));
+      },
+
+      // --- piece generation ---------------------------------------------------
       generatedPiece: null,
+      currentPiece: null,
+      pieceStatus: "idle",
+      pieceSource: null,
+
       setSelectedCluster: (selectedCluster) => set({ selectedCluster }),
       setMomentumOptions: (momentumOptions) => set({ momentumOptions }),
       setChosenForm: (chosenForm) => set({ chosenForm }),
       setGeneratedPiece: (generatedPiece) => set({ generatedPiece }),
+
+      generatePiece: async (form: string) => {
+        const state = get();
+        if (state.pieceStatus === "generating") return;
+
+        const clusterId = state.selectedClusterId || state.selectedCluster?.id;
+        if (!clusterId) {
+          if (process.env.NODE_ENV !== "production") {
+            throw new Error("generatePiece requires a selectedClusterId from Phase 4 constellation");
+          }
+          return;
+        }
+
+        set({ pieceStatus: "generating" });
+
+        // Filter to cluster's own fragments, excluding any captured while locked
+        const targetCluster = state.selectedCluster || {
+          id: clusterId,
+          label: "Your Idea",
+          fragmentIds: state.fragments.map((f) => f.id),
+          readiness: 100,
+          readinessReason: "",
+          suggestedForms: [form],
+        };
+
+        const matching = state.fragments.filter(
+          (f) =>
+            !f.parkedDuringLock &&
+            (f.clusterId === clusterId || targetCluster.fragmentIds.includes(f.id)),
+        );
+        const targetFrags = matching.length > 0 ? matching : state.fragments.filter((f) => !f.parkedDuringLock);
+
+        let pieceData: VerifiedShipResult;
+        let source: AgentSource;
+
+        try {
+          const response = await fetch("/api/ai/ship", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              clusterId,
+              cluster: targetCluster,
+              fragments: targetFrags,
+              form,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Ship route failed with status ${response.status}`);
+          }
+
+          const payload = (await response.json()) as {
+            piece: VerifiedShipResult;
+            source: AgentSource;
+          };
+
+          pieceData = payload.piece;
+          source = payload.source ?? "model";
+        } catch {
+          const fallbackDraft = fallbackShip(targetCluster, targetFrags);
+          pieceData = verifyPiece(fallbackDraft, targetFrags);
+          source = "fallback";
+        }
+
+        const totalWords = (pieceData.fidelity.captured || 0) + (pieceData.fidelity.invented || 0);
+        const percent =
+          totalWords > 0
+            ? Math.round(((pieceData.fidelity.captured || 0) / totalWords) * 100)
+            : 100;
+        const ideaCount = targetFrags.length;
+
+        // Dynamic, fully computed JourneyStep array (no hardcoded values)
+        const journey: JourneyStep[] = [
+          { key: "flood", title: "Flood captured", subtitle: `${ideaCount} ideas`, complete: true },
+          {
+            key: "fidelity",
+            title: "Fidelity agent",
+            subtitle: `${pieceData.fidelity.captured} captured / ${pieceData.fidelity.invented} invented`,
+            complete: true,
+          },
+          {
+            key: "momentum",
+            title: "Momentum agent",
+            subtitle: `${state.momentumOptions.length || 3} forms suggested`,
+            complete: true,
+          },
+          { key: "chosen", title: "You chose", subtitle: form, complete: true },
+          {
+            key: "finished",
+            title: "Piece finished",
+            subtitle: `${totalWords} words, ${percent}% yours`,
+            complete: true,
+          },
+        ];
+
+        const fullPiece: VerifiedPiece = {
+          id: uuid(),
+          title: pieceData.title,
+          form,
+          stanzas: pieceData.stanzas,
+          fidelity: pieceData.fidelity,
+          lockedAt: Date.now(),
+          journey,
+        };
+
+        set({
+          currentPiece: fullPiece,
+          generatedPiece: fullPiece as unknown as Piece,
+          chosenForm: form,
+          pieceStatus: "ready",
+          pieceSource: source,
+          view: "finished",
+        });
+      },
 
       // --- flood / fragments -------------------------------------------------
       fragments: [],
@@ -242,16 +455,27 @@ export const useAppStore = create<AppState>()(
       addFragment: (text, mode) => {
         const trimmed = text.trim();
         if (!trimmed) return null;
+        const state = get();
+
+        // Scope-Lock capture check: tag fragment as parked if scopeLocked is active
+        const isLocked = state.scopeLocked;
         const fragment: Fragment = {
           id: uuid(),
           text: trimmed,
           createdAt: Date.now(),
           mode,
           abandoned: false,
-          clusterId: null,
+          clusterId: isLocked ? "__parked__" : null,
+          parkedDuringLock: isLocked,
         };
-        // Prepend — newest first, so the flood visually grows toward the user.
-        set((state) => ({ fragments: [fragment, ...state.fragments] }));
+
+        set((s) => ({
+          fragments: [fragment, ...s.fragments],
+          parkedSinceLockCount: isLocked
+            ? s.parkedSinceLockCount + 1
+            : s.parkedSinceLockCount,
+        }));
+
         return fragment;
       },
 
@@ -302,18 +526,18 @@ export const useAppStore = create<AppState>()(
     {
       name: "catch-the-flood-store",
       storage: createJSONStorage(() => localStorage),
-      // Only fragments survive a refresh — in-progress typing is deliberately
-      // not restored (resuming half-typed text out of context is more
-      // confusing than losing it), and view/theme have their own handling.
-      partialize: (state) => ({ fragments: state.fragments }),
+      partialize: (state) => ({
+        fragments: state.fragments,
+        currentPiece: state.currentPiece,
+        scopeLocked: state.scopeLocked,
+        lockedClusterId: state.lockedClusterId,
+        parkedSinceLockCount: state.parkedSinceLockCount,
+        chosenForm: state.chosenForm,
+      }),
     },
   ),
 );
 
-// Rehydration is async (by design — keeps the SSR/client first-paint state
-// identical, avoiding a hydration mismatch). Flip the flag once it resolves,
-// covering both the "already finished by the time we got here" race and the
-// normal case.
 if (typeof window !== "undefined") {
   useAppStore.persist.onFinishHydration(() => {
     useAppStore.getState().setFragmentsHydrated(true);
@@ -322,4 +546,3 @@ if (typeof window !== "undefined") {
     useAppStore.getState().setFragmentsHydrated(true);
   }
 }
-

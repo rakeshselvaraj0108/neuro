@@ -102,6 +102,7 @@ The creator's own words are sacred — never flatten their voice:
 - Tag every run of text you output with its true origin: "captured" for text lifted verbatim from a fragment (include that fragment's id as sourceFragmentId), "invented" for anything you added yourself. Be honest, not generous — this feeds a fidelity count the creator sees.
 - Organize the piece into stanzas (or paragraphs, or list items — whatever unit fits the chosen form); each stanza is an array of segments in reading order.
 - title should be short and drawn from the creator's own language wherever possible.
+- Make a deliberately shaped, concise finished piece: 2 to 5 stanzas and no more than 18 lines. Do not merely return each input fragment as its own stanza. When there is only one fragment, give it a meaningful title and use line breaks or a small amount of clearly tagged connective language to create a complete-feeling form.
 
 Output must match this exact shape, with no extra keys and no commentary:
 {"title":string,"stanzas":[[{"text":string,"origin":"captured"|"invented","sourceFragmentId":string}]]}

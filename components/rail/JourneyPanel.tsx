@@ -39,7 +39,13 @@ export function JourneyPanel({ steps }: JourneyPanelProps) {
           const style = { "--stagger-index": index } as CSSProperties;
 
           return (
-            <li key={step.key} className="journey__node" style={style}>
+            <li
+              key={step.key}
+              className={`journey__node ${
+                step.key === "fidelity" ? "journey__node--fidelity-highlight" : ""
+              }`}
+              style={style}
+            >
               {!isLast ? (
                 <span
                   className={

@@ -24,6 +24,8 @@ export interface Fragment {
   abandoned: boolean;
   /** Assigned by the constellation pass; null until the flood is clustered. */
   clusterId: string | null;
+  /** True if captured while scope-lock was active for a piece. */
+  parkedDuringLock?: boolean;
 }
 
 /**

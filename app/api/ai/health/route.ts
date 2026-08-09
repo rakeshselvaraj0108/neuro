@@ -4,7 +4,7 @@ import { z } from "zod";
 import * as cache from "@/lib/ai/cache";
 import * as circuitBreaker from "@/lib/ai/circuitBreaker";
 import { AI_ENABLED } from "@/lib/ai/env";
-import { runAgent } from "@/lib/ai/gateway";
+import { getLastProviderError, runAgent } from "@/lib/ai/gateway";
 
 /**
  * Diagnostic-only route: proves the entire gateway path end-to-end against
@@ -33,5 +33,6 @@ export async function GET() {
     requestCount: cache.getRequestCount(),
     source: result.source,
     latencyMs: result.latencyMs,
+    providerError: result.source === "model" ? null : getLastProviderError(),
   });
 }

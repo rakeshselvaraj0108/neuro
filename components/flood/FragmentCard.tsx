@@ -34,15 +34,13 @@ export function FragmentCard({ fragment, onRemove }: FragmentCardProps) {
   const { isSafe } = useSafeMode();
   const reducedMotion = useReducedMotion();
 
-  // Safe Mode and reduced-motion both flatten the entrance to a plain fade —
-  // the "physical flood catching something" drop + tilt is a mood effect,
-  // not information, so it's the first thing either preference should drop.
+  const isParked = Boolean(fragment.parkedDuringLock || fragment.clusterId === "__parked__");
   const animateEntry = !isSafe && !reducedMotion;
   const rotation = animateEntry ? seededRotation(fragment.id) : 0;
 
   return (
     <motion.div
-      className="fragment-card"
+      className={`fragment-card ${isParked ? "fragment-card--parked" : ""}`}
       style={{ breakInside: "avoid" }}
       initial={
         animateEntry
@@ -59,6 +57,8 @@ export function FragmentCard({ fragment, onRemove }: FragmentCardProps) {
       <div className="fragment-card__head">
         {fragment.mode === "voice" ? (
           <MicIcon size={11} className="fragment-card__mode" />
+        ) : isParked ? (
+          <span className="fragment-card__parked-badge">saved for later</span>
         ) : (
           <span />
         )}
@@ -71,6 +71,10 @@ export function FragmentCard({ fragment, onRemove }: FragmentCardProps) {
           <CloseIcon size={11} />
         </button>
       </div>
+
+      {isParked && fragment.mode === "voice" ? (
+        <span className="fragment-card__parked-badge">saved for later</span>
+      ) : null}
 
       {fragment.abandoned ? (
         <span className="fragment-card__abandoned">caught mid-thought</span>

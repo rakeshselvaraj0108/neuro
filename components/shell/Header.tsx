@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { CheckCircleIcon } from "@/components/icons/CheckCircleIcon";
+import { LockIndicator } from "@/components/scopelock/LockIndicator";
 import { Pill } from "@/components/ui/Pill";
 
 interface HeaderProps {
@@ -27,7 +28,10 @@ export function Header({
         <span className="tagline">Your ideas. Your voice. Finished.</span>
       </div>
 
-      <Pill icon={statusIcon}>{statusLabel}</Pill>
+      <div className="appbar__right">
+        <LockIndicator />
+        <Pill icon={statusIcon}>{statusLabel}</Pill>
+      </div>
     </header>
   );
 }
