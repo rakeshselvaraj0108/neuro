@@ -731,6 +731,14 @@ export const useAppStore = create<AppState>()(
         lockedClusterId: state.lockedClusterId,
         parkedSinceLockCount: state.parkedSinceLockCount,
         chosenForm: state.chosenForm,
+        // Persisted with the piece: without these, a reload silently
+        // discards both the user's explicit theme override AND the
+        // content-derived suggestion computed for this specific piece,
+        // falling back to a hardcoded "bloodmoon"/"Default presentation
+        // theme" regardless of what was actually chosen or suggested.
+        presentationTheme: state.presentationTheme,
+        suggestedTheme: state.suggestedTheme,
+        suggestionReason: state.suggestionReason,
       }),
     },
   ),

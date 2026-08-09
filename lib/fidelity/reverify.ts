@@ -1,74 +1,43 @@
-import { normalizeText, wordsOf } from "@/lib/fidelity/normalize";
-import { computeSimilarity, type VerifiedPiece, type VerifiedSegment } from "@/lib/fidelity/verify";
-import type { Fragment, PieceSegment, SegmentOrigin } from "@/types/domain";
+import {
+  buildNormalizedFragments,
+  verifySegment,
+  type NormalizedFragment,
+  type VerifiedPiece,
+  type VerifiedSegment,
+} from "@/lib/fidelity/verify";
+import type { Fragment, PieceSegment } from "@/types/domain";
 
-const SHORT_SEGMENT_MAX_WORDS = 4;
-const CAPTURED_THRESHOLD = 0.72;
-
-interface NormalizedFragment {
-  id: string;
-  normalized: string;
-}
-
+/**
+ * Re-runs Phase 5's verification on an edited piece, with one addition:
+ * segments the user directly typed carry sourceFragmentId "__user_edit__"
+ * and are treated as captured unconditionally, matchScore 1.0, never
+ * re-scored against the old fragments — a live edit in the creator's own
+ * hand is a new source of truth, not something to pattern-match against
+ * stale capture data. User edits monotonically increase fidelity toward
+ * the creator; they can never make the piece "less yours."
+ *
+ * Every other segment goes through the exact same verifySegment() Phase 5
+ * uses for initial generation — no separate copy of the threshold or the
+ * short/long branching lives here.
+ */
 function verifySegmentWithUserEditGuard(
-  segment: PieceSegment & { sourceFragmentId?: string; matchScore?: number; matchedFragmentId?: string | null },
+  segment: PieceSegment,
   normalizedFragments: NormalizedFragment[],
 ): VerifiedSegment {
-  // Honesty rule: user edits in their own hand are captured by definition (sourceFragmentId === "__user_edit__")
   if (segment.sourceFragmentId === "__user_edit__") {
     return {
       text: segment.text,
       origin: "captured",
       sourceFragmentId: "__user_edit__",
-      matchScore: 1.0,
+      matchScore: 1,
       matchedFragmentId: null,
     };
   }
-
-  const wordCount = wordsOf(segment.text).length;
-  let matchScore = 0;
-  let matchedFragmentId: string | null = null;
-
-  if (wordCount <= SHORT_SEGMENT_MAX_WORDS) {
-    const normalizedSegment = normalizeText(segment.text);
-    if (normalizedSegment.length > 0) {
-      for (const fragment of normalizedFragments) {
-        if (fragment.normalized.includes(normalizedSegment)) {
-          matchScore = 1;
-          matchedFragmentId = fragment.id;
-          break;
-        }
-      }
-    }
-  } else {
-    for (const fragment of normalizedFragments) {
-      const score = computeSimilarity(segment.text, fragment.normalized);
-      if (score > matchScore) {
-        matchScore = score;
-        matchedFragmentId = fragment.id;
-      }
-    }
-  }
-
-  const origin: SegmentOrigin = matchScore >= CAPTURED_THRESHOLD ? "captured" : "invented";
-
-  return {
-    text: segment.text,
-    origin,
-    sourceFragmentId: origin === "captured" ? (matchedFragmentId ?? segment.sourceFragmentId) : undefined,
-    matchScore,
-    matchedFragmentId,
-  };
+  return verifySegment(segment, normalizedFragments);
 }
 
-export function reverifyEditedPiece(
-  piece: VerifiedPiece,
-  sourceFragments: Fragment[],
-): VerifiedPiece {
-  const normalizedFragments: NormalizedFragment[] = sourceFragments.map((fragment) => ({
-    id: fragment.id,
-    normalized: normalizeText(fragment.text),
-  }));
+export function reverifyEditedPiece(piece: VerifiedPiece, sourceFragments: Fragment[]): VerifiedPiece {
+  const normalizedFragments = buildNormalizedFragments(sourceFragments);
 
   let captured = 0;
   let invented = 0;
@@ -85,10 +54,6 @@ export function reverifyEditedPiece(
   return {
     ...piece,
     stanzas,
-    fidelity: {
-      captured,
-      invented,
-      verifiedByCode: true,
-    },
+    fidelity: { captured, invented, verifiedByCode: true },
   };
 }

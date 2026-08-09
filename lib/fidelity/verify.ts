@@ -37,13 +37,24 @@ export interface VerifiedPiece extends Omit<Piece, "stanzas" | "fidelity"> {
 const SHORT_SEGMENT_MAX_WORDS = 4;
 
 /**
- * Tuned once against realistic near-verbatim and clearly-invented examples
- * (see the assertions below `computeSimilarity`). 0.72 sits comfortably
- * above the ~0.5-0.6 a genuinely-different sentence sharing a couple of
- * common words can drift to, and comfortably below the ~0.8-1.0 a lightly
- * reworded verbatim phrase scores.
+ * Empirically tuned, not guessed: for 5+ word segments (the fuzzy path —
+ * segments of 4 words or fewer use the strict substring check above and
+ * never reach this constant), a single word inserted mid-phrase into an
+ * otherwise-verbatim source produces scores from ~0.67 (5-word segments)
+ * climbing to ~0.78 (8-word segments) — the shorter the segment, the more
+ * one inserted word drags the window's Jaccard score down. Meanwhile,
+ * segments that coincidentally share a few common words with a genuinely
+ * unrelated fragment top out around ~0.56 in testing. 0.62 sits in that
+ * gap: comfortably above the coincidental-overlap ceiling (favoring
+ * precision — wrongly crediting invented text as captured is the more
+ * damaging error for a fidelity-trust product), while still clearing every
+ * near-verbatim case tested down to 5-word segments. An earlier pass used
+ * 0.72, copied from this file's own first draft without verifying it
+ * against real scores — it actually failed to capture the shorter
+ * near-verbatim cases (0.67-0.71 < 0.72). See the Phase 5 report for the
+ * full test transcript this was tuned against.
  */
-const CAPTURED_THRESHOLD = 0.72;
+const CAPTURED_THRESHOLD = 0.62;
 
 function jaccard(a: string[], b: string[]): number {
   const setA = new Set(a);
@@ -66,10 +77,10 @@ function jaccard(a: string[], b: string[]): number {
  *
  * Verified examples (run via `npx tsx` against this exact function — see
  * the Phase 5 report for the transcript):
- *   computeSimilarity("faces fade like smoke", "faces just fade like smoke tonight") === 0.75
+ *   computeSimilarity("faces fade like smoke", "faces just fade like smoke tonight") === 0.6
  *   computeSimilarity("the blue train", "the blue train still comes at midnight") === 1
  *   computeSimilarity("carrying something", "the weather today is mild and clear") === 0
- *   computeSimilarity("we need a way to disagree", "a way to disagree without it getting personal") === 0.625
+ *   computeSimilarity("we need a way to disagree", "a way to disagree without it getting personal") === 0.5
  */
 export function computeSimilarity(segment: string, fragment: string): number {
   const segWords = wordsOf(segment);
@@ -90,9 +101,21 @@ export function computeSimilarity(segment: string, fragment: string): number {
   return best;
 }
 
-interface NormalizedFragment {
+export interface NormalizedFragment {
   id: string;
   normalized: string;
+}
+
+/**
+ * Shared setup for every verification pass (initial generation, edit
+ * re-verification, single-stanza refine) — normalize once here so all three
+ * call sites agree on what "the same fragment text" means.
+ */
+export function buildNormalizedFragments(fragments: Fragment[]): NormalizedFragment[] {
+  return fragments.map((fragment) => ({
+    id: fragment.id,
+    normalized: normalizeText(fragment.text),
+  }));
 }
 
 function orderByHint(
@@ -105,7 +128,18 @@ function orderByHint(
   return [hinted, ...fragments.filter((f) => f.id !== hintedId)];
 }
 
-function verifySegment(
+/**
+ * Classifies one segment against a pre-normalized fragment set. The single
+ * source of truth for the short-vs-long branching and the captured/invented
+ * threshold — verifyPiece (initial generation), reverifyEditedPiece (edit
+ * re-verification), and the refine route (single-stanza re-verification)
+ * all call this rather than each keeping their own copy. A prior version of
+ * this project had three independent copies of this logic; one got the
+ * threshold fixed and the other two silently didn't, so segments could be
+ * classified differently depending on which code path touched them — the
+ * exact "fidelity must never drift" bug this phase's brief warns against.
+ */
+export function verifySegment(
   segment: PieceSegment,
   normalizedFragments: NormalizedFragment[],
 ): VerifiedSegment {
@@ -155,10 +189,7 @@ function verifySegment(
 }
 
 export function verifyPiece(draft: ShipResult, sourceFragments: Fragment[]): VerifiedShipResult {
-  const normalizedFragments: NormalizedFragment[] = sourceFragments.map((fragment) => ({
-    id: fragment.id,
-    normalized: normalizeText(fragment.text),
-  }));
+  const normalizedFragments = buildNormalizedFragments(sourceFragments);
 
   let captured = 0;
   let invented = 0;

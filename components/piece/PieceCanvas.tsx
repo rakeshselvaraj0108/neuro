@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 import type { Piece } from "@/types/domain";
 import { usePointerParallax } from "@/hooks/usePointerParallax";
@@ -58,7 +58,23 @@ export function PieceCanvas({ piece, parallaxEnabled, titleId }: PieceCanvasProp
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <BackdropRenderer kind={effectiveTheme.backdropKind} />
+        {/* Cross-dissolves the backdrop itself, not just the flat canvas
+            color, on a theme switch — BackdropRenderer swaps to an entirely
+            different DOM/SVG tree per kind, so a plain CSS color transition
+            on .canvas alone can't fade between them; this can, and respects
+            reduced-motion automatically via the app-wide MotionConfig. */}
+        <AnimatePresence>
+          <motion.div
+            key={effectiveTheme.backdropKind}
+            style={{ position: "absolute", inset: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <BackdropRenderer kind={effectiveTheme.backdropKind} />
+          </motion.div>
+        </AnimatePresence>
 
         <Flourish corner="tl" />
         <Flourish corner="tr" />

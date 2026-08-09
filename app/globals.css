@@ -488,7 +488,8 @@ button:disabled {
   align-items: center;
   gap: 12px;
   margin: 16px 0 20px;
-  color: var(--blood-deep);
+  /* Themed inside the piece canvas — see the .verbatim comment above for why. */
+  color: var(--theme-accent, var(--blood-deep));
 }
 
 .moon-divider__rule {
@@ -529,11 +530,18 @@ button:disabled {
   display: block;
 }
 
-/* The reserved colour. Nothing else in this app may use --blood-glow. */
+/* The reserved colour outside a themed piece canvas. Inside one (the only
+   place .verbatim actually renders), --theme-verbatim-glow — set by
+   PieceCanvas from useEffectiveTheme(), which already folds in Safe Mode
+   precedence — takes over, so every presentation theme (and Safe Mode's
+   calm variant) gets its own correctly-contrasted highlight colour instead
+   of a single fixed crimson regardless of theme. color-mix() replaces the
+   old --blood-glow-rgb tuple lookup so the glow doesn't need its own
+   precomputed RGB channel per theme. */
 .verbatim {
-  color: var(--blood-glow);
+  color: var(--theme-verbatim-glow, var(--blood-glow));
   font-style: inherit;
-  text-shadow: 0 0 18px rgb(var(--blood-glow-rgb) / 26%);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--theme-verbatim-glow, var(--blood-glow)) 26%, transparent);
   background: none;
 }
 
@@ -680,7 +688,8 @@ button:disabled {
 .flourish {
   position: absolute;
   z-index: 4;
-  color: var(--blood-deep);
+  /* Themed inside the piece canvas — see the .verbatim comment above for why. */
+  color: var(--theme-accent, var(--blood-deep));
   opacity: 0.7;
   pointer-events: none;
 }
@@ -712,7 +721,8 @@ button:disabled {
   z-index: 3;
   width: 78px;
   height: 78px;
-  color: var(--blood-deep);
+  /* Themed inside the piece canvas — see the .verbatim comment above for why. */
+  color: var(--theme-accent, var(--blood-deep));
   opacity: 0.85;
   pointer-events: none;
 }
@@ -723,7 +733,7 @@ button:disabled {
   font-weight: 600;
   letter-spacing: 1.7px;
   text-transform: uppercase;
-  fill: var(--blood-deep);
+  fill: var(--theme-accent, var(--blood-deep));
 }
 
 /* ============================================================================
@@ -3374,7 +3384,9 @@ button:disabled {
 .canvas {
   background-color: var(--theme-canvas, var(--ink-void));
   border-color: var(--theme-accent, var(--hair-lit));
-  transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+  transition: background-color 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .canvas--short .canvas__content {
@@ -3411,6 +3423,29 @@ button:disabled {
   background: radial-gradient(circle, var(--theme-accent-bright) 0%, transparent 70%);
   opacity: 0.3;
   filter: blur(40px);
+  /* Same slow ambient pulse as the moon's bloom (12s, opacity-only, GPU-
+     friendly) — the brief names "bloom, dawn glow" together as the two
+     backdrop animations, so dawn shouldn't be the one static exception. */
+  animation: dawn-glow 12s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+
+@keyframes dawn-glow {
+  from {
+    opacity: 0.22;
+  }
+  to {
+    opacity: 0.38;
+  }
+}
+
+[data-theme="safe"] .backdrop--sun .backdrop__sun-bloom {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop--sun .backdrop__sun-bloom {
+    animation: none;
+  }
 }
 
 .backdrop--sun .backdrop__sun-disc {
@@ -3778,6 +3813,11 @@ button:disabled {
   background: rgb(255 255 255 / 15%);
   border-radius: 3px;
   color: var(--theme-text-dim);
+}
+
+.theme-chip__badge--selected {
+  background: var(--theme-accent-bright);
+  color: var(--theme-canvas);
 }
 
 .theme-chip__desc {

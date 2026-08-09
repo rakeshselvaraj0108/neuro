@@ -94,6 +94,13 @@ export function ThemePicker({ onClose }: ThemePickerProps) {
               <div className="theme-chip__info">
                 <div className="theme-chip__name-row">
                   <span className="theme-chip__name">{theme.name}</span>
+                  {/* Never rely on the ring/border alone — a text label backs
+                      up every non-color signal, for sighted users who might
+                      not register a subtle border change, not just for
+                      screen readers (which already get this via aria-checked). */}
+                  {isSelected ? (
+                    <span className="theme-chip__badge theme-chip__badge--selected">Selected</span>
+                  ) : null}
                   {isSuggested ? (
                     <span className="theme-chip__badge">Suggested</span>
                   ) : null}

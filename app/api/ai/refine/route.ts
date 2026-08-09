@@ -3,9 +3,8 @@ import { runAgent } from "@/lib/ai/gateway";
 import { buildRefinePrompt } from "@/lib/ai/prompts";
 import { RefineResultSchema } from "@/lib/ai/schemas";
 import { fallbackRefine } from "@/lib/ai/fallbacks";
-import { computeSimilarity } from "@/lib/fidelity/verify";
-import { normalizeText, wordsOf } from "@/lib/fidelity/normalize";
-import type { Fragment, PieceSegment, SegmentOrigin } from "@/types/domain";
+import { buildNormalizedFragments, verifySegment } from "@/lib/fidelity/verify";
+import type { Fragment, PieceSegment } from "@/types/domain";
 
 export async function POST(req: Request) {
   try {
@@ -47,47 +46,13 @@ export async function POST(req: Request) {
       });
     }
 
-    const normalizedFragments = targetFragments.map((f) => ({
-      id: f.id,
-      normalized: normalizeText(f.text),
-    }));
-
-    const verifiedSegments = result.data.segments.map((segment) => {
-      const wordCount = wordsOf(segment.text).length;
-      let matchScore = 0;
-      let matchedFragmentId: string | null = null;
-
-      if (wordCount <= 4) {
-        const normalizedSeg = normalizeText(segment.text);
-        if (normalizedSeg.length > 0) {
-          for (const frag of normalizedFragments) {
-            if (frag.normalized.includes(normalizedSeg)) {
-              matchScore = 1;
-              matchedFragmentId = frag.id;
-              break;
-            }
-          }
-        }
-      } else {
-        for (const frag of normalizedFragments) {
-          const score = computeSimilarity(segment.text, frag.normalized);
-          if (score > matchScore) {
-            matchScore = score;
-            matchedFragmentId = frag.id;
-          }
-        }
-      }
-
-      const origin: SegmentOrigin = matchScore >= 0.72 ? "captured" : "invented";
-
-      return {
-        text: segment.text,
-        origin,
-        sourceFragmentId: origin === "captured" ? (matchedFragmentId ?? segment.sourceFragmentId) : undefined,
-        matchScore,
-        matchedFragmentId,
-      };
-    });
+    // Same classification Phase 5's initial generation and Phase 7's edit
+    // re-verification use — a single-stanza refine is just verification
+    // scoped to one stanza's worth of segments, not a separate algorithm.
+    const normalizedFragments = buildNormalizedFragments(targetFragments);
+    const verifiedSegments = result.data.segments.map((segment) =>
+      verifySegment(segment, normalizedFragments),
+    );
 
     return NextResponse.json({
       segments: verifiedSegments,
