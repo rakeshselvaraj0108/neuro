@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 
 import { ConstellationScreen } from "@/components/screens/ConstellationScreen";
@@ -9,6 +10,7 @@ import { MomentumScreen } from "@/components/screens/MomentumScreen";
 import { ShipScreen } from "@/components/screens/ShipScreen";
 import { GrainOverlay } from "@/components/shell/GrainOverlay";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { samplePiece } from "@/lib/samplePiece";
 import { useAppStore } from "@/store/useAppStore";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -22,12 +24,26 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 export default function AppOrchestrator() {
   const view = useAppStore((state) => state.view);
   const fragments = useAppStore((state) => state.fragments);
+  const selectedCluster = useAppStore((state) => state.selectedCluster);
+  const chosenForm = useAppStore((state) => state.chosenForm);
+  const generatedPiece = useAppStore((state) => state.generatedPiece);
 
   // Established once, here, at the top of the tree — so it's already correct
   // in the store before any screen-specific content (e.g. a fragment card
   // deciding whether to animate its entrance) ever gets a chance to mount
   // and read a stale default first.
   useReducedMotion();
+
+  // The Constellation trigger lives at the orchestrator level, not inside
+  // the screen: runConstellation() already guards against duplicate runs
+  // (loading state + a fragment-set hash check), so calling it on every
+  // transition into this view is safe and is what makes revisiting the
+  // screen without new fragments free of a second network call.
+  useEffect(() => {
+    if (view === "constellation") {
+      void useAppStore.getState().runConstellation();
+    }
+  }, [view]);
 
   return (
     <MotionConfig reducedMotion="user">
@@ -42,12 +58,12 @@ export default function AppOrchestrator() {
           {view === "flood" ? <FloodScreen /> : null}
           {view === "constellation" ? <ConstellationScreen fragments={fragments} /> : null}
           {view === "momentum" ? (
-            <MomentumScreen cluster={null} fragments={fragments} />
+            <MomentumScreen cluster={selectedCluster} fragments={fragments} />
           ) : null}
           {view === "ship" ? (
-            <ShipScreen cluster={null} fragments={fragments} form={null} />
+            <ShipScreen cluster={selectedCluster} fragments={fragments} form={chosenForm} />
           ) : null}
-          {view === "finished" ? <FinishedPieceScreen /> : null}
+          {view === "finished" ? <FinishedPieceScreen piece={generatedPiece ?? samplePiece} /> : null}
         </motion.div>
       </AnimatePresence>
 
