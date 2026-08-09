@@ -4,17 +4,12 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { uuid } from "@/lib/uuid";
-import type { CaptureMode, Fragment } from "@/types/domain";
-
-export type ThemeName = "blood" | "safe";
+import { type StoredPrefs, type ThemeName } from "@/lib/prefs";
+import { fallbackConstellation } from "@/lib/ai/fallbacks";
+import type { AgentSource } from "@/lib/ai/telemetry";
+import type { CaptureMode, Cluster, Fragment, Piece } from "@/types/domain";
 
 /** localStorage is the only persistence layer in this app. No accounts, ever. */
-export const PREFS_KEY = "ctf.prefs";
-
-export interface StoredPrefs {
-  theme: ThemeName;
-  dyslexiaFont: boolean;
-}
 
 /**
  * The whole product is one page driven by this state machine — no route
@@ -22,10 +17,27 @@ export interface StoredPrefs {
  */
 export type AppView = "flood" | "constellation" | "momentum" | "ship" | "finished";
 
+export type ConstellationStatus = "idle" | "loading" | "ready";
+
 interface LastRemoved {
   fragment: Fragment;
   /** Original position in `fragments`, so undo restores it exactly, not just at the top. */
   index: number;
+}
+
+/**
+ * A simple, stable fingerprint of a fragment set (ids + text, order-
+ * sensitive) — not cryptographic, just enough to know "has anything the
+ * constellation pass cares about changed since last time", so revisiting
+ * the screen without adding fragments never re-spends a credit.
+ */
+function hashFragments(fragments: Fragment[]): string {
+  let hash = 0;
+  const input = fragments.map((f) => `${f.id}:${f.text}`).join("|");
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (Math.imul(hash, 31) + input.charCodeAt(i)) | 0;
+  }
+  return `${fragments.length}:${hash}`;
 }
 
 interface AppState {
@@ -45,6 +57,34 @@ interface AppState {
   // --- view state machine (Phase 3) ----------------------------------------
   view: AppView;
   setView: (view: AppView) => void;
+
+  // --- constellation / clustering (Phase 4) ---------------------------------
+  clusters: Cluster[];
+  constellationStatus: ConstellationStatus;
+  constellationSource: AgentSource | null;
+  selectedClusterId: string | null;
+  /** A stable fingerprint of the fragment set the current `clusters` were computed from — the no-op / re-run guard. */
+  constellationFragmentsHash: string | null;
+  runConstellation: () => Promise<void>;
+  selectCluster: (id: string) => void;
+  /** Clears clusters back to idle. Wired up in Phase 5+ for "add more to the flood"; stubbed now, no call site yet. */
+  resetConstellation: () => void;
+
+  // --- AI flow state (momentum / ship / finished) ---------------------------
+  /**
+   * The full Cluster object for whichever id is selected — kept alongside
+   * `selectedClusterId` (rather than derived on every read) so Momentum and
+   * Ship can keep consuming a plain `Cluster | null` prop. `selectCluster`
+   * keeps both in sync; this one is the one to read from.
+   */
+  selectedCluster: Cluster | null;
+  momentumOptions: Array<{ form: string; pitch: string }>;
+  chosenForm: string | null;
+  generatedPiece: Piece | null;
+  setSelectedCluster: (cluster: Cluster | null) => void;
+  setMomentumOptions: (options: Array<{ form: string; pitch: string }>) => void;
+  setChosenForm: (form: string | null) => void;
+  setGeneratedPiece: (piece: Piece | null) => void;
 
   // --- flood / fragments (Phase 3) -----------------------------------------
   fragments: Fragment[];
@@ -95,6 +135,103 @@ export const useAppStore = create<AppState>()(
       // --- view ------------------------------------------------------------
       view: "flood",
       setView: (view) => set({ view }),
+
+      // --- constellation / clustering ----------------------------------------
+      clusters: [],
+      constellationStatus: "idle",
+      constellationSource: null,
+      selectedClusterId: null,
+      constellationFragmentsHash: null,
+
+      runConstellation: async () => {
+        const state = get();
+        if (state.constellationStatus === "loading") return;
+
+        const hash = hashFragments(state.fragments);
+        if (state.constellationStatus === "ready" && state.constellationFragmentsHash === hash) {
+          // Same flood the last run already covered — don't re-spend a credit
+          // for a screen the user is just re-visiting.
+          return;
+        }
+
+        set({ constellationStatus: "loading" });
+
+        const currentFragments = state.fragments;
+        let clusters: Cluster[];
+        let source: AgentSource;
+
+        try {
+          const response = await fetch("/api/ai/constellation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fragments: currentFragments }),
+          });
+          const payload = (await response.json()) as {
+            data?: { clusters?: Cluster[] };
+            source?: AgentSource;
+            error?: string;
+          };
+          if (!response.ok || !payload.data?.clusters) {
+            throw new Error(payload.error ?? `Constellation request failed: ${response.status}`);
+          }
+          clusters = payload.data.clusters;
+          source = payload.source ?? "fallback";
+        } catch {
+          // The route itself is designed to never fail (the gateway
+          // guarantees a valid result) — reaching here means the network
+          // request never completed at all (e.g. genuinely offline).
+          // Compute the same deterministic fallback locally so the screen
+          // never hangs.
+          clusters = fallbackConstellation(currentFragments).clusters;
+          source = "fallback";
+        }
+
+        // Write clusterId back onto every fragment so it's always
+        // traceable to its cluster from here on.
+        const clusterIdByFragmentId = new Map<string, string>();
+        clusters.forEach((cluster) => {
+          cluster.fragmentIds.forEach((fragmentId) => {
+            clusterIdByFragmentId.set(fragmentId, cluster.id);
+          });
+        });
+
+        set((s) => ({
+          fragments: s.fragments.map((fragment) =>
+            clusterIdByFragmentId.has(fragment.id)
+              ? { ...fragment, clusterId: clusterIdByFragmentId.get(fragment.id) ?? null }
+              : fragment,
+          ),
+          clusters,
+          constellationStatus: "ready",
+          constellationSource: source,
+          constellationFragmentsHash: hash,
+        }));
+      },
+
+      selectCluster: (id) => {
+        const cluster = get().clusters.find((c) => c.id === id) ?? null;
+        set({ selectedClusterId: id, selectedCluster: cluster });
+      },
+
+      resetConstellation: () =>
+        set({
+          clusters: [],
+          constellationStatus: "idle",
+          constellationSource: null,
+          selectedClusterId: null,
+          constellationFragmentsHash: null,
+          selectedCluster: null,
+        }),
+
+      // --- AI flow ----------------------------------------------------------
+      selectedCluster: null,
+      momentumOptions: [],
+      chosenForm: null,
+      generatedPiece: null,
+      setSelectedCluster: (selectedCluster) => set({ selectedCluster }),
+      setMomentumOptions: (momentumOptions) => set({ momentumOptions }),
+      setChosenForm: (chosenForm) => set({ chosenForm }),
+      setGeneratedPiece: (generatedPiece) => set({ generatedPiece }),
 
       // --- flood / fragments -------------------------------------------------
       fragments: [],
@@ -186,40 +323,3 @@ if (typeof window !== "undefined") {
   }
 }
 
-/** Reads stored preferences defensively — malformed JSON must never throw. */
-export function readStoredPrefs(): StoredPrefs {
-  const fallback: StoredPrefs = { theme: "blood", dyslexiaFont: false };
-  if (typeof window === "undefined") return fallback;
-
-  try {
-    const raw = window.localStorage.getItem(PREFS_KEY);
-    if (!raw) return fallback;
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== "object" || parsed === null) return fallback;
-
-    const record = parsed as Record<string, unknown>;
-    return {
-      theme: record.theme === "safe" ? "safe" : "blood",
-      dyslexiaFont: record.dyslexiaFont === true,
-    };
-  } catch {
-    return fallback;
-  }
-}
-
-export function writeStoredPrefs(prefs: StoredPrefs): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
-  } catch {
-    // Private browsing or a full quota. Preferences simply stay session-only.
-  }
-}
-
-/**
- * Runs before first paint, inlined into <head>, so the correct theme is on
- * <html> before anything renders. Kept dependency-free and exception-safe.
- */
-export const THEME_BOOTSTRAP_SCRIPT = `(function(){try{var r=document.documentElement;var s=localStorage.getItem(${JSON.stringify(
-  PREFS_KEY,
-)});var p=s?JSON.parse(s):{};r.setAttribute("data-theme",p&&p.theme==="safe"?"safe":"blood");r.setAttribute("data-font",p&&p.dyslexiaFont===true?"dyslexic":"default");}catch(e){}})();`;
