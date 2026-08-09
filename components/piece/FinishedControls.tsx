@@ -3,15 +3,21 @@
 import { useState } from "react";
 import { EditModeToggle } from "@/components/piece/EditModeToggle";
 import { ThemePicker } from "@/components/piece/ThemePicker";
+import { ExportButtons } from "@/components/export/ExportButtons";
 import { useAppStore } from "@/store/useAppStore";
 import { useEffectiveTheme } from "@/hooks/useEffectiveTheme";
+import { samplePiece } from "@/lib/samplePiece";
+import type { Piece } from "@/types/domain";
 
 export function FinishedControls() {
   const [themePickerOpen, setThemePickerOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const setView = useAppStore((state) => state.setView);
   const scopeLocked = useAppStore((state) => state.scopeLocked);
+  const currentPiece = useAppStore((state) => state.currentPiece);
   const { effectiveTheme } = useEffectiveTheme();
+
+  const activePiece: Piece = (currentPiece as unknown as Piece) ?? samplePiece;
 
   return (
     <div className="finished-controls-container">
@@ -34,33 +40,8 @@ export function FinishedControls() {
             <span>Theme</span>
           </button>
 
-          {/* Export Placeholders (Phase 9) */}
-          <div className="export-placeholders-group" role="group" aria-label="Export options (Phase 9)">
-            <button
-              type="button"
-              className="finished-control-btn finished-control-btn--disabled"
-              disabled
-              title="Export as PNG (Phase 9)"
-            >
-              <span>PNG</span>
-            </button>
-            <button
-              type="button"
-              className="finished-control-btn finished-control-btn--disabled"
-              disabled
-              title="Export as PDF (Phase 9)"
-            >
-              <span>PDF</span>
-            </button>
-            <button
-              type="button"
-              className="finished-control-btn finished-control-btn--disabled"
-              disabled
-              title="Share piece (Phase 9)"
-            >
-              <span>Share</span>
-            </button>
-          </div>
+          {/* Real Export Buttons */}
+          <ExportButtons piece={activePiece} />
         </div>
 
         <button
