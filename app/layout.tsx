@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Cinzel, Cormorant_Garamond, Inter } from "next/font/google";
 
-import { THEME_BOOTSTRAP_SCRIPT } from "@/store/useAppStore";
+import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/prefs";
 
 import "./globals.css";
 

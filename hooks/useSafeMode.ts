@@ -2,12 +2,8 @@
 
 import { useCallback, useEffect } from "react";
 
-import {
-  readStoredPrefs,
-  useAppStore,
-  writeStoredPrefs,
-  type ThemeName,
-} from "@/store/useAppStore";
+import { useAppStore } from "@/store/useAppStore";
+import { readStoredPrefs, writeStoredPrefs, type ThemeName } from "@/lib/prefs";
 
 interface SafeModeApi {
   theme: ThemeName;
